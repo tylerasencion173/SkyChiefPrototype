@@ -1,73 +1,798 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkyChief Tic Tac Toe</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        body {
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #0f0f1e;
-            color: #fff;
-            font-family: 'Press Start 2P', system-ui;
-            text-align: center;
-        }
-        h1 { font-size: 2.5rem; margin-bottom: 10px; text-shadow: 0 0 10px #0ff; }
-        .board {
-            display: grid;
-            grid-template-columns: repeat(3, 120px);
-            grid-template-rows: repeat(3, 120px);
-            gap: 12px;
-            background: #1a1a2e;
-            padding: 12px;
-            border-radius: 20px;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
-        }
-        .cell {
-            background: #16213e;
-            border-radius: 12px;
-            font-size: 4rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: #0ff;
-            box-shadow: inset 0 0 15px rgba(0, 255, 255, 0.2);
-        }
-        .cell:hover { background: #0f3460; }
-        .cell.x { color: #ff00aa; }
-        .cell.o { color: #00ffaa; }
-        .status {
-            margin-top: 20px;
-            font-size: 1.2rem;
-            min-height: 30px;
-        }
-        button {
-            margin-top: 20px;
-            padding: 15px 30px;
-            font-family: 'Press Start 2P', system-ui;
-            font-size: 1rem;
-            background: #ff00aa;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            box-shadow: 0 0 20px #ff00aa;
-        }
-        button:hover { transform: scale(1.05); }
-    </style>
-</head>
-<body>
-    <h1>SKYCHIEF TIC TAC TOE</h1>
-    <div class="board" id="board"></div>
-    <div class="status" id="status">Player X's turn</div>
-    <button onclick="resetGame()">NEW GAME</button>
+import { useState, useEffect, useRef } from "react";
 
+const AIRCRAFT_FLEET = [
+  { id:"737MAX8",    name:"Boeing 737 MAX 8",         type:"narrowbody",  range:6570,  fuelBurnPerHr:2500,  seats:{eco:162,bus:0,  first:0},  cargo:45,  speed:839, price:121000000,  maintenance:4200,  crew:{pilots:2,fa:4},  icon:"✈" },
+  { id:"737MAX10",   name:"Boeing 737 MAX 10",        type:"narrowbody",  range:6110,  fuelBurnPerHr:2700,  seats:{eco:188,bus:0,  first:0},  cargo:52,  speed:839, price:134900000,  maintenance:4600,  crew:{pilots:2,fa:5},  icon:"✈" },
+  { id:"A220-300",   name:"Airbus A220-300",          type:"narrowbody",  range:6297,  fuelBurnPerHr:1900,  seats:{eco:130,bus:0,  first:0},  cargo:38,  speed:828, price:91500000,   maintenance:3800,  crew:{pilots:2,fa:3},  icon:"✈" },
+  { id:"A320neo",    name:"Airbus A320neo",           type:"narrowbody",  range:6300,  fuelBurnPerHr:2400,  seats:{eco:150,bus:16, first:0},  cargo:42,  speed:833, price:101000000,  maintenance:4000,  crew:{pilots:2,fa:4},  icon:"✈" },
+  { id:"A321XLR",    name:"Airbus A321XLR",           type:"narrowbody",  range:8700,  fuelBurnPerHr:2900,  seats:{eco:180,bus:20, first:0},  cargo:55,  speed:833, price:129000000,  maintenance:4800,  crew:{pilots:2,fa:5},  icon:"✈" },
+  { id:"757-200",    name:"Boeing 757-200",           type:"narrowbody",  range:7250,  fuelBurnPerHr:3200,  seats:{eco:178,bus:22, first:0},  cargo:48,  speed:854, price:0,          maintenance:5200,  crew:{pilots:2,fa:4},  icon:"✈", legacy:true },
+  { id:"767-300ER",  name:"Boeing 767-300ER",         type:"widebody",    range:11093, fuelBurnPerHr:5600,  seats:{eco:218,bus:28, first:0},  cargo:120, speed:851, price:0,          maintenance:7800,  crew:{pilots:2,fa:7},  icon:"✈", legacy:true },
+  { id:"787-9",      name:"Boeing 787-9",             type:"widebody",    range:14140, fuelBurnPerHr:5300,  seats:{eco:246,bus:28, first:8},  cargo:132, speed:903, price:292500000,  maintenance:8200,  crew:{pilots:2,fa:8},  icon:"✈" },
+  { id:"787-10",     name:"Boeing 787-10",            type:"widebody",    range:11910, fuelBurnPerHr:5700,  seats:{eco:296,bus:32, first:0},  cargo:155, speed:903, price:338400000,  maintenance:8600,  crew:{pilots:2,fa:9},  icon:"✈" },
+  { id:"777-300ER",  name:"Boeing 777-300ER",         type:"widebody",    range:13650, fuelBurnPerHr:8200,  seats:{eco:350,bus:42, first:8},  cargo:200, speed:905, price:0,          maintenance:11000, crew:{pilots:2,fa:10}, icon:"✈", legacy:true },
+  { id:"777X-9",     name:"Boeing 777X-9",            type:"widebody",    range:13500, fuelBurnPerHr:7800,  seats:{eco:380,bus:48, first:8},  cargo:220, speed:905, price:442200000,  maintenance:10500, crew:{pilots:2,fa:11}, icon:"✈" },
+  { id:"A330-900neo",name:"Airbus A330-900neo",       type:"widebody",    range:13334, fuelBurnPerHr:6200,  seats:{eco:287,bus:30, first:0},  cargo:158, speed:912, price:296400000,  maintenance:8900,  crew:{pilots:2,fa:9},  icon:"✈" },
+  { id:"A350-900",   name:"Airbus A350-900",          type:"widebody",    range:15000, fuelBurnPerHr:5900,  seats:{eco:300,bus:40, first:9},  cargo:172, speed:910, price:317400000,  maintenance:9200,  crew:{pilots:2,fa:9},  icon:"✈" },
+  { id:"A350-1000",  name:"Airbus A350-1000",         type:"widebody",    range:16100, fuelBurnPerHr:6400,  seats:{eco:360,bus:48, first:6},  cargo:200, speed:910, price:366500000,  maintenance:9800,  crew:{pilots:2,fa:10}, icon:"✈" },
+  { id:"A380-800",   name:"Airbus A380-800",          type:"superjumbo",  range:15200, fuelBurnPerHr:11000, seats:{eco:420,bus:76, first:14}, cargo:300, speed:903, price:0,          maintenance:18000, crew:{pilots:2,fa:22}, icon:"✈", legacy:true },
+  { id:"747-8I",     name:"Boeing 747-8I",            type:"superjumbo",  range:14815, fuelBurnPerHr:10500, seats:{eco:364,bus:48, first:14}, cargo:280, speed:988, price:0,          maintenance:16000, crew:{pilots:2,fa:16}, icon:"✈", legacy:true },
+  { id:"ERJ175",     name:"Embraer E175",             type:"regional",    range:3735,  fuelBurnPerHr:1200,  seats:{eco:76, bus:0,  first:0},  cargo:18,  speed:870, price:49000000,   maintenance:2400,  crew:{pilots:2,fa:2},  icon:"✈" },
+  { id:"ERJ195E2",   name:"Embraer E195-E2",          type:"regional",    range:4800,  fuelBurnPerHr:1600,  seats:{eco:120,bus:0,  first:0},  cargo:30,  speed:870, price:68000000,   maintenance:3200,  crew:{pilots:2,fa:3},  icon:"✈" },
+  { id:"ATR72",      name:"ATR 72-600",               type:"turboprop",   range:1528,  fuelBurnPerHr:600,   seats:{eco:70, bus:0,  first:0},  cargo:12,  speed:510, price:26000000,   maintenance:1800,  crew:{pilots:2,fa:2},  icon:"✈" },
+  { id:"B737F",      name:"Boeing 737-800BCF Cargo",  type:"freighter",   range:6900,  fuelBurnPerHr:2800,  seats:{eco:0,  bus:0,  first:0},  cargo:215, speed:839, price:0,          maintenance:4400,  crew:{pilots:2,fa:0},  icon:"📦" },
+  { id:"777F",       name:"Boeing 777F Cargo",        type:"freighter",   range:9200,  fuelBurnPerHr:8400,  seats:{eco:0,  bus:0,  first:0},  cargo:670, speed:905, price:0,          maintenance:12000, crew:{pilots:2,fa:0},  icon:"📦" },
+];
 
+const AIRPORTS = [
+  {code:"JFK",name:"John F. Kennedy Intl",            city:"New York",          country:"USA",region:"North America",lat:40.64, lon:-73.78, slots:80, gates:120,hub:true},
+  {code:"LAX",name:"Los Angeles Intl",                city:"Los Angeles",        country:"USA",region:"North America",lat:33.94, lon:-118.41,slots:90, gates:130,hub:true},
+  {code:"ORD",name:"O'Hare Intl",                     city:"Chicago",            country:"USA",region:"North America",lat:41.98, lon:-87.90, slots:75, gates:110,hub:true},
+  {code:"ATL",name:"Hartsfield-Jackson",              city:"Atlanta",            country:"USA",region:"North America",lat:33.64, lon:-84.43, slots:85, gates:150,hub:true},
+  {code:"DFW",name:"Dallas/Fort Worth Intl",          city:"Dallas",             country:"USA",region:"North America",lat:32.90, lon:-97.04, slots:70, gates:120,hub:true},
+  {code:"DEN",name:"Denver Intl",                     city:"Denver",             country:"USA",region:"North America",lat:39.86, lon:-104.67,slots:65, gates:100,hub:true},
+  {code:"SFO",name:"San Francisco Intl",              city:"San Francisco",      country:"USA",region:"North America",lat:37.62, lon:-122.38,slots:65, gates:90, hub:true},
+  {code:"SEA",name:"Seattle-Tacoma Intl",             city:"Seattle",            country:"USA",region:"North America",lat:47.45, lon:-122.31,slots:55, gates:70},
+  {code:"MIA",name:"Miami Intl",                      city:"Miami",              country:"USA",region:"North America",lat:25.80, lon:-80.29, slots:60, gates:80},
+  {code:"BOS",name:"Logan Intl",                      city:"Boston",             country:"USA",region:"North America",lat:42.37, lon:-71.00, slots:50, gates:65},
+  {code:"AUS",name:"Austin-Bergstrom Intl",           city:"Austin",             country:"USA",region:"North America",lat:30.20, lon:-97.67, slots:40, gates:55},
+  {code:"PHX",name:"Phoenix Sky Harbor Intl",         city:"Phoenix",            country:"USA",region:"North America",lat:33.44, lon:-112.01,slots:55, gates:85},
+  {code:"LAS",name:"Harry Reid Intl",                 city:"Las Vegas",          country:"USA",region:"North America",lat:36.08, lon:-115.15,slots:55, gates:80},
+  {code:"MCO",name:"Orlando Intl",                    city:"Orlando",            country:"USA",region:"North America",lat:28.43, lon:-81.31, slots:50, gates:75},
+  {code:"CLT",name:"Charlotte Douglas Intl",          city:"Charlotte",          country:"USA",region:"North America",lat:35.21, lon:-80.94, slots:50, gates:90},
+  {code:"IAH",name:"George Bush Intercontinental",    city:"Houston",            country:"USA",region:"North America",lat:29.99, lon:-95.34, slots:60, gates:100},
+  {code:"HOU",name:"Hobby Airport",                   city:"Houston Hobby",      country:"USA",region:"North America",lat:29.64, lon:-95.28, slots:35, gates:45},
+  {code:"EWR",name:"Newark Liberty Intl",             city:"Newark",             country:"USA",region:"North America",lat:40.69, lon:-74.17, slots:65, gates:90},
+  {code:"LGA",name:"LaGuardia Airport",               city:"New York LGA",       country:"USA",region:"North America",lat:40.78, lon:-73.87, slots:45, gates:55},
+  {code:"PHL",name:"Philadelphia Intl",               city:"Philadelphia",       country:"USA",region:"North America",lat:39.87, lon:-75.24, slots:50, gates:70},
+  {code:"BWI",name:"Baltimore Washington Intl",       city:"Baltimore",          country:"USA",region:"North America",lat:39.17, lon:-76.67, slots:45, gates:60},
+  {code:"IAD",name:"Dulles Intl",                     city:"Washington DC",      country:"USA",region:"North America",lat:38.94, lon:-77.46, slots:55, gates:80},
+  {code:"DCA",name:"Reagan National Airport",         city:"Washington DCA",     country:"USA",region:"North America",lat:38.85, lon:-77.04, slots:35, gates:45},
+  {code:"DTW",name:"Detroit Metro Wayne County",      city:"Detroit",            country:"USA",region:"North America",lat:42.21, lon:-83.35, slots:50, gates:80},
+  {code:"MSP",name:"Minneapolis St Paul Intl",        city:"Minneapolis",        country:"USA",region:"North America",lat:44.88, lon:-93.22, slots:50, gates:75},
+  {code:"PDX",name:"Portland Intl",                   city:"Portland OR",        country:"USA",region:"North America",lat:45.59, lon:-122.60,slots:40, gates:55},
+  {code:"SLC",name:"Salt Lake City Intl",             city:"Salt Lake City",     country:"USA",region:"North America",lat:40.79, lon:-111.98,slots:45, gates:65},
+  {code:"STL",name:"St Louis Lambert Intl",           city:"St. Louis",          country:"USA",region:"North America",lat:38.75, lon:-90.37, slots:40, gates:60},
+  {code:"BNA",name:"Nashville Intl",                  city:"Nashville",          country:"USA",region:"North America",lat:36.12, lon:-86.68, slots:38, gates:50},
+  {code:"RDU",name:"Raleigh Durham Intl",             city:"Raleigh",            country:"USA",region:"North America",lat:35.88, lon:-78.79, slots:35, gates:48},
+  {code:"MCI",name:"Kansas City Intl",                city:"Kansas City",        country:"USA",region:"North America",lat:39.30, lon:-94.71, slots:35, gates:50},
+  {code:"TPA",name:"Tampa Intl",                      city:"Tampa",              country:"USA",region:"North America",lat:27.98, lon:-82.53, slots:38, gates:55},
+  {code:"FLL",name:"Fort Lauderdale Hollywood Intl",  city:"Fort Lauderdale",    country:"USA",region:"North America",lat:26.07, lon:-80.15, slots:40, gates:55},
+  {code:"SAT",name:"San Antonio Intl",                city:"San Antonio",        country:"USA",region:"North America",lat:29.53, lon:-98.47, slots:32, gates:42},
+  {code:"MSY",name:"Louis Armstrong New Orleans Intl",city:"New Orleans",        country:"USA",region:"North America",lat:29.99, lon:-90.26, slots:32, gates:42},
+  {code:"CLE",name:"Cleveland Hopkins Intl",          city:"Cleveland",          country:"USA",region:"North America",lat:41.41, lon:-81.85, slots:32, gates:45},
+  {code:"IND",name:"Indianapolis Intl",               city:"Indianapolis",       country:"USA",region:"North America",lat:39.72, lon:-86.29, slots:32, gates:45},
+  {code:"CMH",name:"John Glenn Columbus Intl",        city:"Columbus OH",        country:"USA",region:"North America",lat:39.99, lon:-82.89, slots:30, gates:40},
+  {code:"PIT",name:"Pittsburgh Intl",                 city:"Pittsburgh",         country:"USA",region:"North America",lat:40.49, lon:-80.23, slots:32, gates:48},
+  {code:"MKE",name:"Milwaukee Mitchell Intl",         city:"Milwaukee",          country:"USA",region:"North America",lat:42.95, lon:-87.90, slots:28, gates:36},
+  {code:"OMA",name:"Eppley Airfield",                 city:"Omaha",              country:"USA",region:"North America",lat:41.30, lon:-95.89, slots:25, gates:28},
+  {code:"OKC",name:"Will Rogers World Airport",       city:"Oklahoma City",      country:"USA",region:"North America",lat:35.39, lon:-97.60, slots:25, gates:30},
+  {code:"TUL",name:"Tulsa Intl",                      city:"Tulsa",              country:"USA",region:"North America",lat:36.20, lon:-95.89, slots:22, gates:26},
+  {code:"ABQ",name:"Albuquerque Intl Sunport",        city:"Albuquerque",        country:"USA",region:"North America",lat:35.04, lon:-106.61,slots:22, gates:28},
+  {code:"ELP",name:"El Paso Intl",                    city:"El Paso",            country:"USA",region:"North America",lat:31.81, lon:-106.38,slots:20, gates:24},
+  {code:"MEM",name:"Memphis Intl",                    city:"Memphis",            country:"USA",region:"North America",lat:35.04, lon:-89.98, slots:28, gates:38},
+  {code:"BHM",name:"Birmingham Shuttlesworth Intl",   city:"Birmingham",         country:"USA",region:"North America",lat:33.56, lon:-86.75, slots:22, gates:28},
+  {code:"JAX",name:"Jacksonville Intl",               city:"Jacksonville FL",    country:"USA",region:"North America",lat:30.49, lon:-81.69, slots:25, gates:32},
+  {code:"SJC",name:"San Jose Mineta Intl",            city:"San Jose",           country:"USA",region:"North America",lat:37.36, lon:-121.93,slots:35, gates:45},
+  {code:"OAK",name:"Oakland Intl",                    city:"Oakland",            country:"USA",region:"North America",lat:37.72, lon:-122.22,slots:32, gates:40},
+  {code:"SMF",name:"Sacramento Intl",                 city:"Sacramento",         country:"USA",region:"North America",lat:38.70, lon:-121.59,slots:32, gates:40},
+  {code:"SAN",name:"San Diego Intl",                  city:"San Diego",          country:"USA",region:"North America",lat:32.73, lon:-117.19,slots:38, gates:50},
+  {code:"SNA",name:"John Wayne Airport",              city:"Orange County",      country:"USA",region:"North America",lat:33.68, lon:-117.87,slots:25, gates:30},
+  {code:"BUR",name:"Hollywood Burbank Airport",       city:"Burbank",            country:"USA",region:"North America",lat:34.20, lon:-118.36,slots:22, gates:28},
+  {code:"HNL",name:"Daniel K Inouye Intl",            city:"Honolulu",           country:"USA",region:"North America",lat:21.32, lon:-157.92,slots:45, gates:60},
+  {code:"OGG",name:"Kahului Airport",                 city:"Maui",               country:"USA",region:"North America",lat:20.90, lon:-156.43,slots:22, gates:28},
+  {code:"ANC",name:"Ted Stevens Anchorage Intl",      city:"Anchorage",          country:"USA",region:"North America",lat:61.17, lon:-149.99,slots:28, gates:35},
+  {code:"GEG",name:"Spokane Intl",                    city:"Spokane",            country:"USA",region:"North America",lat:47.62, lon:-117.53,slots:20, gates:24},
+  {code:"BOI",name:"Boise Airport",                   city:"Boise",              country:"USA",region:"North America",lat:43.56, lon:-116.22,slots:20, gates:26},
+  {code:"RNO",name:"Reno Tahoe Intl",                 city:"Reno",               country:"USA",region:"North America",lat:39.50, lon:-119.77,slots:22, gates:28},
+  {code:"TUS",name:"Tucson Intl",                     city:"Tucson",             country:"USA",region:"North America",lat:32.12, lon:-110.94,slots:20, gates:26},
+  {code:"SDF",name:"Louisville Intl",                 city:"Louisville",         country:"USA",region:"North America",lat:38.18, lon:-85.74, slots:22, gates:30},
+  {code:"CVG",name:"Cincinnati Northern Kentucky Intl",city:"Cincinnati",        country:"USA",region:"North America",lat:39.04, lon:-84.66, slots:28, gates:38},
+  {code:"BUF",name:"Buffalo Niagara Intl",            city:"Buffalo",            country:"USA",region:"North America",lat:42.94, lon:-78.73, slots:20, gates:25},
+  {code:"SJU",name:"Luis Munoz Marin Intl",           city:"San Juan PR",        country:"USA",region:"North America",lat:18.44, lon:-66.00, slots:35, gates:45},
+  {code:"YYZ",name:"Toronto Pearson Intl",            city:"Toronto",            country:"Canada",region:"North America",lat:43.68, lon:-79.63,slots:60, gates:85},
+  {code:"YVR",name:"Vancouver Intl",                  city:"Vancouver",          country:"Canada",region:"North America",lat:49.19, lon:-123.18,slots:50,gates:70},
+  {code:"YUL",name:"Montreal Trudeau Intl",           city:"Montreal",           country:"Canada",region:"North America",lat:45.47, lon:-73.74,slots:45, gates:60},
+  {code:"MEX",name:"Benito Juarez Intl",              city:"Mexico City",        country:"Mexico",region:"North America",lat:19.44, lon:-99.07, slots:55, gates:75},
+  {code:"CUN",name:"Cancun Intl",                     city:"Cancun",             country:"Mexico",region:"North America",lat:21.04, lon:-86.87, slots:40, gates:55},
+  {code:"LHR",name:"Heathrow",                        city:"London",             country:"UK",    region:"Europe",        lat:51.48, lon:-0.46,  slots:100,gates:140},
+  {code:"CDG",name:"Charles de Gaulle",               city:"Paris",              country:"France",region:"Europe",        lat:49.01, lon:2.55,   slots:90, gates:125},
+  {code:"FRA",name:"Frankfurt Main",                  city:"Frankfurt",          country:"Germany",region:"Europe",       lat:50.03, lon:8.57,   slots:85, gates:115},
+  {code:"AMS",name:"Amsterdam Schiphol",              city:"Amsterdam",          country:"Netherlands",region:"Europe",   lat:52.31, lon:4.76,   slots:80, gates:110},
+  {code:"MAD",name:"Madrid Barajas",                  city:"Madrid",             country:"Spain", region:"Europe",        lat:40.47, lon:-3.56,  slots:70, gates:95},
+  {code:"FCO",name:"Leonardo da Vinci Intl",          city:"Rome",               country:"Italy", region:"Europe",        lat:41.80, lon:12.25,  slots:65, gates:88},
+  {code:"IST",name:"Istanbul Airport",                city:"Istanbul",           country:"Turkey",region:"Europe",        lat:41.27, lon:28.74,  slots:95, gates:130},
+  {code:"MUC",name:"Munich Airport",                  city:"Munich",             country:"Germany",region:"Europe",       lat:48.35, lon:11.79,  slots:65, gates:90},
+  {code:"BCN",name:"Barcelona El Prat",               city:"Barcelona",          country:"Spain", region:"Europe",        lat:41.30, lon:2.07,   slots:60, gates:80},
+  {code:"LGW",name:"London Gatwick",                  city:"London Gatwick",     country:"UK",    region:"Europe",        lat:51.15, lon:-0.18,  slots:60, gates:80},
+  {code:"ZRH",name:"Zurich Airport",                  city:"Zurich",             country:"Switzerland",region:"Europe",   lat:47.46, lon:8.55,   slots:55, gates:70},
+  {code:"CPH",name:"Copenhagen Airport",              city:"Copenhagen",         country:"Denmark",region:"Europe",       lat:55.62, lon:12.66,  slots:50, gates:65},
+  {code:"VIE",name:"Vienna Intl",                     city:"Vienna",             country:"Austria",region:"Europe",       lat:48.11, lon:16.57,  slots:50, gates:65},
+  {code:"DUB",name:"Dublin Airport",                  city:"Dublin",             country:"Ireland",region:"Europe",       lat:53.42, lon:-6.27,  slots:45, gates:58},
+  {code:"LIS",name:"Lisbon Humberto Delgado",         city:"Lisbon",             country:"Portugal",region:"Europe",      lat:38.78, lon:-9.14,  slots:48, gates:62},
+  {code:"ATH",name:"Athens Intl",                     city:"Athens",             country:"Greece",region:"Europe",        lat:37.94, lon:23.95,  slots:42, gates:55},
+  {code:"WAW",name:"Warsaw Chopin",                   city:"Warsaw",             country:"Poland",region:"Europe",        lat:52.17, lon:20.97,  slots:40, gates:52},
+  {code:"DXB",name:"Dubai Intl",                      city:"Dubai",              country:"UAE",   region:"Middle East",   lat:25.25, lon:55.36,  slots:100,gates:150},
+  {code:"DOH",name:"Hamad Intl",                      city:"Doha",               country:"Qatar", region:"Middle East",   lat:25.27, lon:51.61,  slots:80, gates:100},
+  {code:"AUH",name:"Abu Dhabi Intl",                  city:"Abu Dhabi",          country:"UAE",   region:"Middle East",   lat:24.43, lon:54.65,  slots:65, gates:85},
+  {code:"RUH",name:"King Khalid Intl",                city:"Riyadh",             country:"Saudi Arabia",region:"Middle East",lat:24.96,lon:46.70,slots:65,gates:88},
+  {code:"TLV",name:"Ben Gurion Intl",                 city:"Tel Aviv",           country:"Israel",region:"Middle East",   lat:32.00, lon:34.89,  slots:50, gates:65},
+  {code:"SIN",name:"Changi Airport",                  city:"Singapore",          country:"Singapore",region:"Asia-Pacific",lat:1.36, lon:103.99, slots:95, gates:130},
+  {code:"HKG",name:"Hong Kong Intl",                  city:"Hong Kong",          country:"China", region:"Asia-Pacific",  lat:22.31, lon:113.91, slots:85, gates:110},
+  {code:"NRT",name:"Narita Intl",                     city:"Tokyo",              country:"Japan", region:"Asia-Pacific",  lat:35.77, lon:140.39, slots:80, gates:100},
+  {code:"HND",name:"Tokyo Haneda",                    city:"Tokyo Haneda",       country:"Japan", region:"Asia-Pacific",  lat:35.55, lon:139.78, slots:80, gates:100},
+  {code:"ICN",name:"Incheon Intl",                    city:"Seoul",              country:"South Korea",region:"Asia-Pacific",lat:37.47,lon:126.45,slots:75,gates:95},
+  {code:"PEK",name:"Beijing Capital Intl",            city:"Beijing",            country:"China", region:"Asia-Pacific",  lat:40.08, lon:116.60, slots:90, gates:120},
+  {code:"PVG",name:"Shanghai Pudong Intl",            city:"Shanghai",           country:"China", region:"Asia-Pacific",  lat:31.14, lon:121.80, slots:85, gates:110},
+  {code:"BKK",name:"Suvarnabhumi Airport",            city:"Bangkok",            country:"Thailand",region:"Asia-Pacific", lat:13.69, lon:100.75, slots:70, gates:92},
+  {code:"SYD",name:"Kingsford Smith Intl",            city:"Sydney",             country:"Australia",region:"Asia-Pacific",lat:-33.94,lon:151.18,slots:70,gates:90},
+  {code:"MEL",name:"Melbourne Airport",               city:"Melbourne",          country:"Australia",region:"Asia-Pacific",lat:-37.67,lon:144.84,slots:60,gates:78},
+  {code:"DEL",name:"Indira Gandhi Intl",              city:"New Delhi",          country:"India", region:"Asia-Pacific",  lat:28.56, lon:77.10,  slots:75, gates:95},
+  {code:"BOM",name:"Chhatrapati Shivaji Intl",        city:"Mumbai",             country:"India", region:"Asia-Pacific",  lat:19.09, lon:72.87,  slots:65, gates:85},
+  {code:"GRU",name:"Guarulhos Intl",                  city:"Sao Paulo",          country:"Brazil",region:"Latin America",  lat:-23.43,lon:-46.47,slots:65,gates:85},
+  {code:"BOG",name:"El Dorado Intl",                  city:"Bogota",             country:"Colombia",region:"Latin America", lat:4.70,  lon:-74.15,slots:55,gates:70},
+  {code:"LIM",name:"Jorge Chavez Intl",               city:"Lima",               country:"Peru",  region:"Latin America",  lat:-12.02,lon:-77.11,slots:50,gates:65},
+  {code:"SCL",name:"Arturo Merino Benitez Intl",      city:"Santiago",           country:"Chile", region:"Latin America",  lat:-33.39,lon:-70.79,slots:48,gates:62},
+  {code:"EZE",name:"Ministro Pistarini Intl",         city:"Buenos Aires",       country:"Argentina",region:"Latin America",lat:-34.82,lon:-58.54,slots:55,gates:72},
+  {code:"PTY",name:"Tocumen Intl",                    city:"Panama City",        country:"Panama",region:"Latin America",  lat:9.07,  lon:-79.38,slots:45,gates:58},
+  {code:"JNB",name:"OR Tambo Intl",                   city:"Johannesburg",       country:"South Africa",region:"Africa",   lat:-26.14,lon:28.24,slots:60,gates:80},
+  {code:"CPT",name:"Cape Town Intl",                  city:"Cape Town",          country:"South Africa",region:"Africa",   lat:-33.96,lon:18.60,slots:42,gates:55},
+  {code:"NBO",name:"Jomo Kenyatta Intl",              city:"Nairobi",            country:"Kenya", region:"Africa",         lat:-1.32, lon:36.93, slots:45,gates:55},
+  {code:"CAI",name:"Cairo Intl",                      city:"Cairo",              country:"Egypt", region:"Africa",         lat:30.11, lon:31.41, slots:50,gates:65},
+  {code:"LOS",name:"Murtala Muhammed Intl",           city:"Lagos",              country:"Nigeria",region:"Africa",        lat:6.58,  lon:3.32,  slots:40,gates:52},
+  {code:"ADD",name:"Bole Intl",                       city:"Addis Ababa",        country:"Ethiopia",region:"Africa",       lat:8.98,  lon:38.80, slots:45,gates:58},
+];
+
+const MEALS_BY_REGION = {
+  "North America": [{name:"Classic Burger & Fries",cost:8},{name:"Caesar Salad",cost:6},{name:"BBQ Ribs Platter",cost:14},{name:"Pancake Breakfast",cost:9},{name:"Clam Chowder Bowl",cost:11}],
+  "Europe":        [{name:"Beef Bourguignon",cost:16},{name:"Pasta Carbonara",cost:12},{name:"Fish and Chips",cost:11},{name:"Croissant and Cheese",cost:7},{name:"Wiener Schnitzel",cost:13}],
+  "Asia-Pacific":  [{name:"Hainanese Chicken Rice",cost:10},{name:"Ramen Bowl",cost:13},{name:"Dim Sum Selection",cost:15},{name:"Katsu Curry",cost:12},{name:"Nasi Goreng",cost:10}],
+  "Middle East":   [{name:"Lamb Kabsa",cost:14},{name:"Mezze Platter",cost:12},{name:"Shawarma Wrap",cost:9},{name:"Hummus and Flatbread",cost:7},{name:"Mansaf",cost:15}],
+  "Latin America": [{name:"Churrasco Plate",cost:15},{name:"Empanadas",cost:8},{name:"Ceviche",cost:13},{name:"Bandeja Paisa",cost:14},{name:"Tacos al Pastor",cost:9}],
+  "Africa":        [{name:"Jollof Rice and Chicken",cost:11},{name:"Bobotie",cost:12},{name:"Ugali and Nyama Choma",cost:10},{name:"Tagine",cost:13},{name:"Injera and Doro Wat",cost:12}],
+};
+
+const EMPLOYEE_ROLES = [
+  {role:"Captain",            salary:18000, required:true,  perUnit:"aircraft"},
+  {role:"First Officer",      salary:10000, required:true,  perUnit:"aircraft"},
+  {role:"Flight Attendant",   salary:4200,  required:true,  perUnit:"aircraft"},
+  {role:"Ground Handler",     salary:3100,  required:true,  perUnit:"route"},
+  {role:"Maintenance Eng",    salary:7500,  required:true,  perUnit:"aircraft"},
+  {role:"Gate Agent",         salary:3400,  required:false, perUnit:"gate"},
+  {role:"Cargo Handler",      salary:3600,  required:false, perUnit:"route"},
+  {role:"Customer Svc Rep",   salary:3200,  required:false, perUnit:"hub"},
+  {role:"Revenue Manager",    salary:9500,  required:false, perUnit:"hub"},
+  {role:"Marketing Manager",  salary:8800,  required:false, perUnit:"hub"},
+];
+
+const AI_AIRLINES = [
+  {name:"SkyBridge Airways", code:"SBA", hub:"LHR", color:"#1a6fc4", cash:800000000,  type:"Full-service"},
+  {name:"Pacific Winds",     code:"PWX", hub:"NRT", color:"#c43b1a", cash:600000000,  type:"Full-service"},
+  {name:"Gulf Star",         code:"GUS", hub:"DXB", color:"#c4a11a", cash:1200000000, type:"Premium full-service"},
+  {name:"AmeriJet",          code:"AMJ", hub:"ATL", color:"#1ac47a", cash:950000000,  type:"Low-cost"},
+  {name:"EuroLink",          code:"ELK", hub:"FRA", color:"#8b1ac4", cash:700000000,  type:"Hybrid"},
+];
+
+const ECONOMIC_EVENTS = [
+  {id:"fuel_crisis",name:"Global Fuel Crisis",    desc:"Jet fuel prices spike 40% for 30 days",   effect:{fuelMult:1.4},   duration:30},
+  {id:"recession",  name:"Economic Recession",    desc:"Passenger demand drops 25%",              effect:{demandMult:0.75},duration:60},
+  {id:"pandemic",   name:"Health Emergency",       desc:"International travel drops 60%",          effect:{demandMult:0.4}, duration:90},
+  {id:"strike",     name:"Pilot Strike",           desc:"25% of flights grounded",                 effect:{groundedPct:0.25},duration:14},
+  {id:"boom",       name:"Travel Boom",            desc:"Passenger demand surges 30%",             effect:{demandMult:1.3}, duration:45},
+  {id:"cargoboom",  name:"E-Commerce Surge",       desc:"Cargo revenue plus 50%",                  effect:{cargoMult:1.5},  duration:60},
+  {id:"weather",    name:"Major Weather Event",    desc:"Hub disrupted, 30% delays",               effect:{delayPct:0.3},  duration:7},
+];
+
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371,dL=(lat2-lat1)*Math.PI/180,dO=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function fuelCost(dist,speed,burn,price){return(dist/speed)*burn*price;}
+function fmt(n){
+  if(Math.abs(n)>=1e9)return`$${(n/1e9).toFixed(2)}B`;
+  if(Math.abs(n)>=1e6)return`$${(n/1e6).toFixed(1)}M`;
+  return`$${Math.round(n).toLocaleString()}`;
+}
+
+const CARD={background:"#0a1628",border:"1px solid #1e3050",borderRadius:8,padding:12};
+const LS={display:"block",color:"#5a7a9a",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",marginBottom:5};
+const IS={width:"100%",padding:"9px 11px",background:"#050d1a",border:"1px solid #1e3050",borderRadius:6,color:"#d4e4f4",fontSize:12,boxSizing:"border-box"};
+const BS={padding:"8px 15px",background:"transparent",border:"1px solid #1e3050",borderRadius:6,color:"#5a7a9a",fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:"inherit"};
+function BP(a){return{padding:"8px 15px",background:`linear-gradient(135deg,${a?.secondaryColor||"#c8a84b"},${a?.primaryColor||"#1a3a6c"})`,border:"none",borderRadius:6,color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:1,fontFamily:"inherit"};}
+
+export default function App(){
+  const [screen,setScreen]=useState("setup");
+  const [airline,setAirline]=useState(null);
+  const [gs,setGs]=useState(null);
+  const [tab,setTab]=useState("dashboard");
+  const [notif,setNotif]=useState(null);
+  const tickRef=useRef(null);
+  const [form,setForm]=useState({name:"",code:"",type:"Full-service",hub:"JFK",primaryColor:"#1a3a6c",secondaryColor:"#c8a84b",logoUrl:null});
+
+  function showNotif(msg,type="ok"){setNotif({msg,type});setTimeout(()=>setNotif(null),3500);}
+
+  function startGame(){
+    if(!form.name||!form.code)return;
+    const hub=AIRPORTS.find(a=>a.code===form.hub);
+    const startCash={"Ultra low-cost":80e6,"Low-cost":150e6,"Full-service":300e6,"Premium full-service":500e6,"Cargo-only":250e6,"Hybrid":350e6}[form.type]||200e6;
+    setAirline({...form});
+    setGs({
+      cash:startCash,debt:0,daysPassed:0,fuelPrice:0.85,
+      fleet:[
+        {id:"ac1",modelId:"A320neo",registration:`${form.code}001`,status:"active",age:3,maintenanceDue:400,hoursFlown:2400,assignedRoute:null},
+        {id:"ac2",modelId:"737MAX8",registration:`${form.code}002`,status:"active",age:2,maintenanceDue:450,hoursFlown:1800,assignedRoute:null},
+      ],
+      routes:[],gates:{[hub.code]:{owned:2,rented:0,rentedOut:0,capacity:hub.gates}},
+      employees:{total:24,byRole:{Captain:4,"First Officer":4,"Flight Attendant":8,"Ground Handler":6,"Maintenance Eng":2}},
+      alliances:[],loyalty:{members:0,pointsIssued:0},
+      financials:{revenue:0,expenses:0,profit:0,history:[]},
+      economicEvents:[],aiAirlines:AI_AIRLINES.map(a=>({...a,routes:[],fleet:3})),
+      mergers:[],notifications:[],hub:hub.code,reputation:72,onTimePerf:85,loadFactor:0,
+    });
+    setScreen("game");
+  }
+
+  useEffect(()=>{
+    if(screen!=="game"||!gs)return;
+    tickRef.current=setInterval(()=>{
+      setGs(prev=>{
+        if(!prev)return prev;
+        const g=JSON.parse(JSON.stringify(prev));
+        g.daysPassed+=1;
+        g.fuelPrice=Math.max(0.55,Math.min(2.20,g.fuelPrice+(Math.random()-0.498)*0.015));
+        if(Math.random()<0.008&&g.economicEvents.length<2){
+          const pool=ECONOMIC_EVENTS.filter(e=>!g.economicEvents.find(ae=>ae.id===e.id));
+          if(pool.length){const ev=pool[Math.floor(Math.random()*pool.length)];g.economicEvents.push({...ev,startDay:g.daysPassed,daysLeft:ev.duration});g.notifications.unshift({type:"event",msg:`ALERT: ${ev.name} - ${ev.desc}`,day:g.daysPassed});}
+        }
+        g.economicEvents=g.economicEvents.map(e=>({...e,daysLeft:e.daysLeft-1})).filter(e=>e.daysLeft>0);
+        let fuelMult=1,demandMult=1,cargoMult=1;
+        g.economicEvents.forEach(ev=>{if(ev.effect.fuelMult)fuelMult*=ev.effect.fuelMult;if(ev.effect.demandMult)demandMult*=ev.effect.demandMult;if(ev.effect.cargoMult)cargoMult*=ev.effect.cargoMult;});
+        let dayRev=0,dayExp=0;
+        g.routes.forEach(route=>{
+          const dep=AIRPORTS.find(a=>a.code===route.dep);const arr=AIRPORTS.find(a=>a.code===route.arr);
+          if(!dep||!arr)return;
+          const dist=haversine(dep.lat,dep.lon,arr.lat,arr.lon);
+          const ac=AIRCRAFT_FLEET.find(a=>a.id===route.aircraftModel);if(!ac)return;
+          const fpd=route.frequency/7,bl=(route.loadFactor||75)/100*demandMult;
+          const paxE=Math.floor(ac.seats.eco*bl*fpd),paxB=Math.floor(ac.seats.bus*(bl*0.7)*fpd),paxF=Math.floor(ac.seats.first*(bl*0.5)*fpd);
+          const eF=route.fares?.eco||Math.max(80,dist*0.08),bF=route.fares?.bus||eF*3.5,fF=route.fares?.first||eF*7;
+          const paxRev=paxE*eF+paxB*bF+paxF*fF;
+          const cargoRev=ac.cargo*(route.cargoRate||2.8)*dist/1000*fpd*cargoMult;
+          const mealRev=(paxE+paxB+paxF)*(route.mealUpgrade||0);
+          const ancRev=(paxE+paxB+paxF)*(route.ancillary||12);
+          const fuel=fuelCost(dist,ac.speed,ac.fuelBurnPerHr,g.fuelPrice*fuelMult)*fpd;
+          const rRev=paxRev+cargoRev+mealRev+ancRev,rExp=fuel+(arr.slots>50?1800:1200)+2200*fpd+(ac.crew.pilots*850+ac.crew.fa*420)*fpd;
+          route.dailyRevenue=rRev;route.dailyProfit=rRev-rExp;route.paxToday=paxE+paxB+paxF;
+          route.healthScore=rRev>rExp?Math.min(100,Math.round((route.dailyProfit/rRev)*100+50)):Math.max(0,Math.round(50-(rExp-rRev)/rExp*100));
+          dayRev+=rRev;dayExp+=rExp;
+        });
+        const sal=EMPLOYEE_ROLES.reduce((s,r)=>s+(g.employees.byRole[r.role]||0)*r.salary/30,0);
+        const maint=g.fleet.reduce((s,ac)=>{const m=AIRCRAFT_FLEET.find(x=>x.id===ac.modelId);return s+(m?m.maintenance/30:0);},0);
+        Object.values(g.gates).forEach(gg=>{dayRev+=(gg.rentedOut||0)*1200;dayExp+=(gg.rented||0)*900;});
+        dayExp+=sal+maint;
+        g.cash+=dayRev-dayExp;g.financials.revenue+=dayRev;g.financials.expenses+=dayExp;g.financials.profit=g.financials.revenue-g.financials.expenses;
+        g.loyalty.members+=Math.floor(g.routes.length*8*demandMult);
+        if(g.daysPassed%30===0){g.financials.history.push({month:Math.floor(g.daysPassed/30),revenue:g.financials.revenue,expenses:g.financials.expenses,profit:g.financials.profit,cash:g.cash});g.financials.revenue=0;g.financials.expenses=0;}
+        if(g.routes.length>0)g.loadFactor=Math.round(g.routes.reduce((s,r)=>s+(r.loadFactor||75),0)/g.routes.length);
+        g.cash<0?g.reputation=Math.max(0,g.reputation-1):g.reputation=Math.min(100,g.reputation+0.05);
+        g.onTimePerf=g.economicEvents.some(e=>e.effect.delayPct)?Math.max(50,g.onTimePerf-2):Math.min(95,g.onTimePerf+0.1);
+        if(g.notifications.length>60)g.notifications=g.notifications.slice(0,60);
+        return g;
+      });
+    },5000);
+    return()=>clearInterval(tickRef.current);
+  },[screen,gs?.routes?.length]);
+
+  if(screen==="setup")return<SetupScreen form={form} setForm={setForm} onStart={startGame}/>;
+  if(!gs||!airline)return null;
+  return<GameScreen airline={airline} gs={gs} setGs={setGs} tab={tab} setTab={setTab} notif={notif} showNotif={showNotif}/>;
+}
+
+function SetupScreen({form,setForm,onStart}){
+  const logoRef=useRef(null);
+  const types=["Ultra low-cost","Low-cost","Full-service","Premium full-service","Cargo-only","Hybrid"];
+  const hubs=AIRPORTS.filter(a=>a.country==="USA"||a.country==="Canada");
+  return(
+    <div style={{minHeight:"100vh",background:"#050d1a",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif",padding:20}}>
+      <div style={{width:"100%",maxWidth:640}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:52,marginBottom:6}}>✈</div>
+          <h1 style={{color:"#c8a84b",fontSize:34,fontWeight:700,margin:0,letterSpacing:4,textTransform:"uppercase"}}>SkyChief</h1>
+          <p style={{color:"#3a5a7a",fontSize:12,marginTop:6,letterSpacing:3,textTransform:"uppercase"}}>Airline Management Simulator</p>
+        </div>
+        <div style={{background:"#0a1628",border:"1px solid #1e3050",borderRadius:12,padding:28}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+            <div><label style={LS}>Airline Name</label><input style={IS} placeholder="e.g. Horizon Airways" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/></div>
+            <div><label style={LS}>ICAO Code (3 letters)</label><input style={IS} placeholder="HZN" maxLength={3} value={form.code} onChange={e=>setForm(f=>({...f,code:e.target.value.toUpperCase()}))}/></div>
+          </div>
+          <div style={{marginBottom:14}}>
+            <label style={LS}>Airline Type</label>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              {types.map(t=><button key={t} onClick={()=>setForm(f=>({...f,type:t}))} style={{padding:"6px 14px",borderRadius:20,fontSize:12,cursor:"pointer",border:"1px solid",borderColor:form.type===t?"#c8a84b":"#1e3050",background:form.type===t?"#c8a84b22":"transparent",color:form.type===t?"#c8a84b":"#5a7a9a"}}>{t}</button>)}
+            </div>
+          </div>
+          <div style={{marginBottom:14}}>
+            <label style={LS}>Starting Hub</label>
+            <select style={IS} value={form.hub} onChange={e=>setForm(f=>({...f,hub:e.target.value}))}>
+              {hubs.map(a=><option key={a.code} value={a.code}>{a.code} - {a.name}, {a.city}</option>)}
+            </select>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+            <div><label style={LS}>Primary Color</label><input type="color" value={form.primaryColor} onChange={e=>setForm(f=>({...f,primaryColor:e.target.value}))} style={{width:"100%",height:40,borderRadius:6,border:"1px solid #1e3050",cursor:"pointer",background:"transparent"}}/></div>
+            <div><label style={LS}>Secondary Color</label><input type="color" value={form.secondaryColor} onChange={e=>setForm(f=>({...f,secondaryColor:e.target.value}))} style={{width:"100%",height:40,borderRadius:6,border:"1px solid #1e3050",cursor:"pointer",background:"transparent"}}/></div>
+          </div>
+          <div style={{marginBottom:20}}>
+            <label style={LS}>Upload Logo</label>
+            <div onClick={()=>logoRef.current?.click()} style={{border:"2px dashed #1e3050",borderRadius:8,padding:16,textAlign:"center",cursor:"pointer"}}>
+              {form.logoUrl?<img src={form.logoUrl} alt="logo" style={{maxHeight:70,maxWidth:180,objectFit:"contain"}}/>:<div style={{color:"#3a5a7a",fontSize:13}}>Click to upload PNG / SVG / JPG</div>}
+              <input ref={logoRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(f)setForm(p=>({...p,logoUrl:URL.createObjectURL(f)}));}}/>
+            </div>
+          </div>
+          {form.name&&<div style={{background:"#050d1a",borderRadius:8,padding:14,marginBottom:20,display:"flex",alignItems:"center",gap:14}}>
+            <div style={{width:52,height:52,borderRadius:8,background:form.primaryColor,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+              {form.logoUrl?<img src={form.logoUrl} style={{width:"100%",height:"100%",objectFit:"contain"}}/>:<span style={{color:"#fff",fontSize:22}}>✈</span>}
+            </div>
+            <div><div style={{color:"#fff",fontWeight:700,fontSize:15}}>{form.name}</div><div style={{color:form.secondaryColor,fontSize:12}}>{form.code} - {form.type} - Hub: {form.hub}</div></div>
+          </div>}
+          <button onClick={onStart} style={{width:"100%",padding:14,background:`linear-gradient(135deg,${form.secondaryColor},${form.primaryColor})`,border:"none",borderRadius:8,color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",letterSpacing:2,textTransform:"uppercase"}}>Begin Operations</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GameScreen({airline,gs,setGs,tab,setTab,notif,showNotif}){
+  const tabs=[
+    {id:"dashboard",label:"Dashboard",icon:"📊"},{id:"map",label:"Live Map",icon:"🗺"},
+    {id:"routes",label:"Routes",icon:"✈"},{id:"fleet",label:"Fleet",icon:"🛩"},
+    {id:"airports",label:"Airports",icon:"🏢"},{id:"staff",label:"Staff",icon:"👥"},
+    {id:"alliances",label:"Alliances",icon:"🤝"},{id:"ma",label:"M&A",icon:"🏦"},
+    {id:"finance",label:"Finance",icon:"💰"},{id:"events",label:"Events",icon:"⚡"},
+  ];
+  return(
+    <div style={{minHeight:"100vh",background:"#050d1a",fontFamily:"Georgia,serif",color:"#d4e4f4"}}>
+      <div style={{background:"#0a1628",borderBottom:"1px solid #1e3050",padding:"8px 14px",display:"flex",alignItems:"center",gap:10,position:"sticky",top:0,zIndex:100,flexWrap:"wrap"}}>
+        <div style={{width:34,height:34,borderRadius:6,background:airline.primaryColor,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
+          {airline.logoUrl?<img src={airline.logoUrl} style={{width:"100%",height:"100%",objectFit:"contain"}}/>:<span style={{color:"#fff",fontSize:15}}>✈</span>}
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{color:airline.secondaryColor,fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{airline.name}</div>
+          <div style={{color:"#3a5a7a",fontSize:10,letterSpacing:1}}>{airline.code} - Day {gs.daysPassed}</div>
+        </div>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+          {[{l:"Cash",v:fmt(gs.cash),c:gs.cash>0?"#22c55e":"#ef4444"},{l:"Fuel",v:`$${gs.fuelPrice.toFixed(3)}/L`,c:"#c8a84b"},{l:"Routes",v:gs.routes.length,c:"#60a5fa"},{l:"Fleet",v:gs.fleet.length,c:"#a78bfa"},{l:"Rep",v:`${Math.round(gs.reputation)}%`,c:"#fb923c"}].map(x=>(
+            <div key={x.l} style={{textAlign:"center"}}><div style={{color:"#3a5a7a",fontSize:9,letterSpacing:1,textTransform:"uppercase"}}>{x.l}</div><div style={{color:x.c,fontWeight:700,fontSize:12}}>{x.v}</div></div>
+          ))}
+        </div>
+      </div>
+      {gs.economicEvents.length>0&&<div style={{background:"#7c2d12",padding:"5px 14px",fontSize:11,color:"#fca5a5",display:"flex",gap:16,overflowX:"auto"}}>
+        {gs.economicEvents.map(ev=><span key={ev.id}>WARNING: {ev.name} ({ev.daysLeft}d left)</span>)}
+      </div>}
+      {notif&&<div style={{position:"fixed",top:66,right:14,background:"#0a1628",border:"1px solid #1e3050",borderLeft:`3px solid ${notif.type==="err"?"#ef4444":"#22c55e"}`,borderRadius:8,padding:"10px 14px",fontSize:12,zIndex:200,maxWidth:280}}>{notif.msg}</div>}
+      <div style={{display:"flex",overflowX:"auto",borderBottom:"1px solid #1e3050",background:"#0a1628"}}>
+        {tabs.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"9px 13px",background:"transparent",border:"none",cursor:"pointer",color:tab===t.id?airline.secondaryColor:"#3a5a7a",borderBottom:tab===t.id?`2px solid ${airline.secondaryColor}`:"2px solid transparent",fontSize:11,whiteSpace:"nowrap",fontFamily:"inherit"}}>{t.icon} {t.label}</button>)}
+      </div>
+      <div style={{padding:14,maxWidth:1200,margin:"0 auto"}}>
+        {tab==="dashboard"&&<DashboardTab gs={gs} airline={airline}/>}
+        {tab==="map"&&<LiveMapTab gs={gs} airline={airline}/>}
+        {tab==="routes"&&<RoutesTab gs={gs} setGs={setGs} airline={airline} showNotif={showNotif}/>}
+        {tab==="fleet"&&<FleetTab gs={gs} setGs={setGs} airline={airline} showNotif={showNotif}/>}
+        {tab==="airports"&&<AirportsTab gs={gs} setGs={setGs} airline={airline} showNotif={showNotif}/>}
+        {tab==="staff"&&<StaffTab gs={gs} setGs={setGs} showNotif={showNotif}/>}
+        {tab==="alliances"&&<AlliancesTab gs={gs} setGs={setGs} airline={airline} showNotif={showNotif}/>}
+        {tab==="ma"&&<MATab gs={gs} setGs={setGs} airline={airline} showNotif={showNotif}/>}
+        {tab==="finance"&&<FinanceTab gs={gs} airline={airline}/>}
+        {tab==="events"&&<EventsTab gs={gs}/>}
+      </div>
+    </div>
+  );
+}
+
+function LiveMapTab({gs,airline}){
+  const canvasRef=useRef(null);
+  const animRef=useRef(null);
+  const timeRef=useRef(0);
+  const [mapRegion,setMapRegion]=useState("world");
+  const VIEWS={world:{minLon:-180,maxLon:180,minLat:-60,maxLat:85},usa:{minLon:-130,maxLon:-65,minLat:22,maxLat:52},europe:{minLon:-15,maxLon:45,minLat:35,maxLat:72},asia:{minLon:60,maxLon:155,minLat:-10,maxLat:55},latam:{minLon:-90,maxLon:-30,minLat:-60,maxLat:25}};
+  function project(lat,lon,w,h,view){const vw=view.maxLon-view.minLon,vh=view.maxLat-view.minLat;return{x:((lon-view.minLon)/vw)*w,y:((view.maxLat-lat)/vh)*h};}
+  useEffect(()=>{
+    const canvas=canvasRef.current;if(!canvas)return;
+    const ctx=canvas.getContext("2d");const view=VIEWS[mapRegion];
+    function draw(){
+      const W=canvas.width,H=canvas.height;
+      ctx.clearRect(0,0,W,H);ctx.fillStyle="#050d1a";ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle="#0a1a2e";ctx.lineWidth=0.5;
+      for(let lon=-180;lon<=180;lon+=30){const p1=project(view.maxLat,lon,W,H,view);const p2=project(view.minLat,lon,W,H,view);if(p1.x>=0&&p1.x<=W){ctx.beginPath();ctx.moveTo(p1.x,0);ctx.lineTo(p2.x,H);ctx.stroke();}}
+      for(let lat=-60;lat<=85;lat+=20){const p1=project(lat,view.minLon,W,H,view);const p2=project(lat,view.maxLon,W,H,view);if(p1.y>=0&&p1.y<=H){ctx.beginPath();ctx.moveTo(0,p1.y);ctx.lineTo(W,p2.y);ctx.stroke();}}
+      gs.routes.forEach((route,ri)=>{
+        const dep=AIRPORTS.find(a=>a.code===route.dep);const arr=AIRPORTS.find(a=>a.code===route.arr);if(!dep||!arr)return;
+        const p1=project(dep.lat,dep.lon,W,H,view);const p2=project(arr.lat,arr.lon,W,H,view);
+        const inV=(p)=>p.x>-50&&p.x<W+50&&p.y>-50&&p.y<H+50;if(!inV(p1)&&!inV(p2))return;
+        const health=route.healthScore||75;const rc=health>=70?"#22c55e":health>=40?"#f59e0b":"#ef4444";
+        const cx=(p1.x+p2.x)/2,cy=(p1.y+p2.y)/2-Math.abs(p2.x-p1.x)*0.25-20;
+        ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.quadraticCurveTo(cx,cy,p2.x,p2.y);ctx.strokeStyle=rc+"55";ctx.lineWidth=1.2;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+        const t=((timeRef.current/120+ri*0.37)%1),mt=(1-t);
+        const px=mt*mt*p1.x+2*mt*t*cx+t*t*p2.x,py=mt*mt*p1.y+2*mt*t*cy+t*t*p2.y;
+        const dx=2*mt*(cx-p1.x)+2*t*(p2.x-cx),dy=2*mt*(cy-p1.y)+2*t*(p2.y-cy);
+        const angle=Math.atan2(dy,dx);
+        const grd=ctx.createRadialGradient(px,py,0,px,py,10);grd.addColorStop(0,airline.secondaryColor+"88");grd.addColorStop(1,"transparent");ctx.fillStyle=grd;ctx.beginPath();ctx.arc(px,py,10,0,Math.PI*2);ctx.fill();
+        ctx.save();ctx.translate(px,py);ctx.rotate(angle);ctx.fillStyle=airline.secondaryColor;ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-5,4);ctx.lineTo(-3,0);ctx.lineTo(-5,-4);ctx.closePath();ctx.fill();ctx.restore();
+      });
+      AIRPORTS.forEach(ap=>{
+        const p=project(ap.lat,ap.lon,W,H,view);if(p.x<-10||p.x>W+10||p.y<-10||p.y>H+10)return;
+        const isMyHub=ap.code===gs.hub;const hasRoute=gs.routes.some(r=>r.dep===ap.code||r.arr===ap.code);
+        if(!hasRoute&&!ap.hub&&mapRegion!=="usa")return;
+        const r=isMyHub?6:ap.hub?4:hasRoute?3:2;const col=isMyHub?airline.secondaryColor:hasRoute?"#60a5fa":ap.hub?"#3a5a7a":"#1e3050";
+        if(isMyHub||hasRoute){const pulse=0.5+0.5*Math.sin(timeRef.current*0.08+ap.code.charCodeAt(0)*0.3);ctx.beginPath();ctx.arc(p.x,p.y,r+4*pulse,0,Math.PI*2);ctx.strokeStyle=col+"44";ctx.lineWidth=1;ctx.stroke();}
+        ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
+        if((hasRoute||isMyHub)&&W>400){ctx.fillStyle=isMyHub?airline.secondaryColor:"#8aaccc";ctx.font=`bold ${isMyHub?11:9}px Georgia`;ctx.fillText(ap.code,p.x+r+3,p.y+4);}
+      });
+      ctx.fillStyle="#0a1628cc";ctx.fillRect(8,H-58,160,52);ctx.strokeStyle="#1e3050";ctx.lineWidth=1;ctx.strokeRect(8,H-58,160,52);
+      ctx.font="10px Georgia";
+      [{c:airline.secondaryColor,l:"Your Aircraft"},{c:"#22c55e",l:"Healthy Route"},{c:"#f59e0b",l:"Needs Attention"},{c:"#ef4444",l:"Losing Money"},{c:"#60a5fa",l:"Airport"}].forEach((x,i)=>{ctx.fillStyle=x.c;ctx.beginPath();ctx.arc(22,H-46+i*10,4,0,Math.PI*2);ctx.fill();ctx.fillStyle="#8aaccc";ctx.fillText(x.l,30,H-43+i*10);});
+      timeRef.current+=1;animRef.current=requestAnimationFrame(draw);
+    }
+    animRef.current=requestAnimationFrame(draw);return()=>cancelAnimationFrame(animRef.current);
+  },[gs.routes,gs.hub,airline,mapRegion]);
+  useEffect(()=>{
+    const canvas=canvasRef.current;if(!canvas)return;
+    const resize=()=>{const parent=canvas.parentElement;canvas.width=parent.offsetWidth;canvas.height=Math.min(500,Math.max(300,window.innerHeight*0.55));};
+    resize();window.addEventListener("resize",resize);return()=>window.removeEventListener("resize",resize);
+  },[]);
+  const activePax=gs.routes.reduce((s,r)=>s+(r.paxToday||0),0);
+  const hc=s=>s>=70?"#22c55e":s>=40?"#f59e0b":"#ef4444";
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <h2 style={{color:airline.secondaryColor,fontSize:18,fontWeight:700,margin:0,letterSpacing:2,textTransform:"uppercase"}}>Live Route Map</h2>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {Object.keys(VIEWS).map(v=><button key={v} onClick={()=>setMapRegion(v)} style={{padding:"5px 12px",borderRadius:16,fontSize:11,cursor:"pointer",border:"1px solid",borderColor:mapRegion===v?airline.secondaryColor:"#1e3050",background:mapRegion===v?`${airline.secondaryColor}22`:"transparent",color:mapRegion===v?airline.secondaryColor:"#5a7a9a",textTransform:"capitalize"}}>{v==="usa"?"USA":v==="world"?"World":v==="europe"?"Europe":v==="asia"?"Asia":"Lat Am"}</button>)}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:10,marginBottom:10,flexWrap:"wrap"}}>
+        {[{l:"Routes",v:gs.routes.length,c:"#60a5fa"},{l:"Pax Today",v:activePax.toLocaleString(),c:"#22c55e"},{l:"Hub",v:gs.hub,c:airline.secondaryColor},{l:"Fleet",v:gs.fleet.length,c:"#a78bfa"},{l:"Day",v:gs.daysPassed,c:"#c8a84b"}].map(x=>(
+          <div key={x.l} style={{background:"#0a1628",border:"1px solid #1e3050",borderRadius:6,padding:"6px 12px",textAlign:"center"}}><div style={{color:"#3a5a7a",fontSize:9,letterSpacing:1,textTransform:"uppercase"}}>{x.l}</div><div style={{color:x.c,fontWeight:700,fontSize:14}}>{x.v}</div></div>
+        ))}
+      </div>
+      <div style={{background:"#050d1a",borderRadius:10,border:"1px solid #1e3050",overflow:"hidden",width:"100%"}}><canvas ref={canvasRef} style={{display:"block",width:"100%"}}/></div>
+      {gs.routes.length===0&&<div style={{textAlign:"center",color:"#3a5a7a",fontSize:13,marginTop:16,padding:16,border:"1px solid #1e3050",borderRadius:8}}>No routes yet. Go to the Routes tab to launch your first flight. Your planes will appear here in real time!</div>}
+      {gs.routes.length>0&&<div style={{marginTop:14}}>
+        <div style={{color:"#c8a84b",fontSize:12,fontWeight:700,marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>Active Flights</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
+          {gs.routes.map(r=>{const dep=AIRPORTS.find(a=>a.code===r.dep);const arr=AIRPORTS.find(a=>a.code===r.arr);const h=r.healthScore||75;return(
+            <div key={r.id} style={{background:"#0a1628",border:"1px solid #1e3050",borderLeft:`3px solid ${hc(h)}`,borderRadius:6,padding:10}}>
+              <div style={{color:"#d4e4f4",fontWeight:700,fontSize:12}}>{r.dep} to {r.arr}</div>
+              <div style={{color:"#5a7a9a",fontSize:10}}>{dep?.city} to {arr?.city}</div>
+              <div style={{color:"#5a7a9a",fontSize:10}}>{r.distance?.toLocaleString()}km - {r.flightHrs}h - {r.frequency}x/wk</div>
+              <div style={{color:(r.dailyProfit||0)>0?"#22c55e":"#ef4444",fontSize:11,fontWeight:700,marginTop:2}}>{fmt(r.dailyProfit||0)}/day</div>
+            </div>
+          );})}
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+function DashboardTab({gs,airline}){
+  const totalRev=gs.routes.reduce((s,r)=>s+(r.dailyRevenue||0),0);
+  const totalProfit=gs.routes.reduce((s,r)=>s+(r.dailyProfit||0),0);
+  const needsAttn=gs.routes.filter(r=>(r.healthScore||100)<50);
+  const top=gs.routes.slice().sort((a,b)=>(b.dailyProfit||0)-(a.dailyProfit||0)).slice(0,5);
+  return(
+    <div>
+      <h2 style={{color:airline.secondaryColor,fontSize:18,fontWeight:700,marginBottom:14,letterSpacing:2,textTransform:"uppercase"}}>Operations Dashboard</h2>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
+        {[{l:"Daily Revenue",v:fmt(totalRev),c:"#22c55e",i:"📈"},{l:"Daily Profit",v:fmt(totalProfit),c:totalProfit>0?"#22c55e":"#ef4444",i:"💹"},{l:"Cash",v:fmt(gs.cash),c:gs.cash>0?"#60a5fa":"#ef4444",i:"🏦"},{l:"Load Factor",v:`${gs.loadFactor}%`,c:"#c8a84b",i:"🪑"},{l:"On-Time",v:`${Math.round(gs.onTimePerf)}%`,c:"#a78bfa",i:"⏱"},{l:"Loyalty Members",v:gs.loyalty.members.toLocaleString(),c:"#fb923c",i:"⭐"},{l:"Reputation",v:`${Math.round(gs.reputation)}/100`,c:"#f472b6",i:"🏆"},{l:"Fuel per L",v:`$${gs.fuelPrice.toFixed(3)}`,c:"#fbbf24",i:"⛽"}].map(x=>(
+          <div key={x.l} style={{...CARD,textAlign:"center"}}><div style={{fontSize:22,marginBottom:4}}>{x.i}</div><div style={{color:x.c,fontWeight:700,fontSize:16}}>{x.v}</div><div style={{color:"#3a5a7a",fontSize:10,letterSpacing:1,textTransform:"uppercase"}}>{x.l}</div></div>
+        ))}
+      </div>
+      {needsAttn.length>0&&<div style={{background:"#450a0a",border:"1px solid #991b1b",borderRadius:8,padding:12,marginBottom:12}}>
+        <div style={{color:"#fca5a5",fontWeight:700,marginBottom:8}}>Routes Needing Attention ({needsAttn.length})</div>
+        {needsAttn.map(r=><div key={r.id} style={{color:"#fca5a5",fontSize:12,marginBottom:4}}>{r.dep} to {r.arr} - Health: {r.healthScore}% - Daily P&L: {fmt(r.dailyProfit||0)}</div>)}
+      </div>}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div style={CARD}><div style={{color:"#c8a84b",fontWeight:700,marginBottom:10,fontSize:12}}>Top Routes by Profit</div>{top.length===0&&<div style={{color:"#3a5a7a",fontSize:12}}>No routes yet.</div>}{top.map(r=><div key={r.id} style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:12}}><span style={{color:"#d4e4f4"}}>{r.dep} to {r.arr}</span><span style={{color:(r.dailyProfit||0)>0?"#22c55e":"#ef4444"}}>{fmt(r.dailyProfit||0)}/day</span></div>)}</div>
+        <div style={CARD}><div style={{color:"#c8a84b",fontWeight:700,marginBottom:10,fontSize:12}}>Latest News</div>{gs.notifications.slice(0,6).map((n,i)=><div key={i} style={{fontSize:11,color:"#8aaccc",marginBottom:5,paddingBottom:5,borderBottom:"1px solid #1e3050"}}>Day {n.day}: {n.msg}</div>)}{gs.notifications.length===0&&<div style={{color:"#3a5a7a",fontSize:12}}>No news yet.</div>}</div>
+      </div>
+      <div style={{...CARD,marginTop:12}}><div style={{color:"#c8a84b",fontWeight:700,marginBottom:10,fontSize:12}}>Competitors</div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:8}}>{gs.aiAirlines.map(ai=><div key={ai.code} style={{background:"#050d1a",borderRadius:6,padding:8,borderLeft:`3px solid ${ai.color}`}}><div style={{color:ai.color,fontWeight:700,fontSize:12}}>{ai.name}</div><div style={{color:"#5a7a9a",fontSize:10}}>{ai.code} - {ai.hub} - {ai.type}</div></div>)}</div></div>
+    </div>
+  );
+}
+
+function RoutesTab({gs,setGs,airline,showNotif}){
+  const [adding,setAdding]=useState(false);
+  const [regionFilter,setRegionFilter]=useState("All");
+  const [form,setForm]=useState({dep:gs.hub,arr:"",aircraftModel:"A320neo",frequency:7,fares:{eco:0,bus:0,first:0},cargoRate:2.8,mealDep:null,mealArr:null,ancillary:12,loadFactor:75});
+  const depAP=AIRPORTS.find(a=>a.code===form.dep);const arrAP=AIRPORTS.find(a=>a.code===form.arr);
+  const selAC=AIRCRAFT_FLEET.find(a=>a.id===form.aircraftModel);
+  const dist=depAP&&arrAP?Math.round(haversine(depAP.lat,depAP.lon,arrAP.lat,arrAP.lon)):0;
+  const hrs=selAC?(dist/selAC.speed).toFixed(1):0;
+  const estFuel=selAC?Math.round(fuelCost(dist,selAC.speed,selAC.fuelBurnPerHr,gs.fuelPrice)):0;
+  const isIntl=depAP&&arrAP&&depAP.country!==arrAP.country;
+  const depMeals=depAP?(MEALS_BY_REGION[depAP.region]||[]):[];const arrMeals=arrAP?(MEALS_BY_REGION[arrAP.region]||[]):[];
+  const regions=["All","North America","Europe","Asia-Pacific","Middle East","Latin America","Africa"];
+  const filteredArr=AIRPORTS.filter(a=>a.code!==form.dep&&(regionFilter==="All"||a.region===regionFilter));
+  const hc=s=>s>=70?"#22c55e":s>=40?"#f59e0b":"#ef4444";
+  function addRoute(){
+    if(!form.dep||!form.arr||form.dep===form.arr)return showNotif("Select valid airports.","err");
+    if(dist>(selAC?.range||0))return showNotif(`${selAC?.name} max range: ${selAC?.range}km. Route is ${dist}km.`,"err");
+    const eF=form.fares.eco||Math.max(80,Math.round(dist*0.08));
+    setGs(prev=>({...prev,routes:[...prev.routes,{id:`rt-${Date.now()}`,dep:form.dep,arr:form.arr,aircraftModel:form.aircraftModel,frequency:form.frequency,fares:{eco:eF,bus:form.fares.bus||Math.round(eF*3.5),first:form.fares.first||Math.round(eF*7)},cargoRate:form.cargoRate,mealDep:form.mealDep,mealArr:form.mealArr,mealUpgrade:((form.mealDep?.cost||0)+(form.mealArr?.cost||0))*0.3,ancillary:form.ancillary,loadFactor:form.loadFactor,dailyRevenue:0,dailyProfit:0,paxToday:0,healthScore:75,distance:dist,flightHrs:parseFloat(hrs),isIntl}]}));
+    showNotif(`Route ${form.dep} to ${form.arr} launched!`);setAdding(false);
+  }
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <h2 style={{color:airline.secondaryColor,fontSize:18,fontWeight:700,margin:0,letterSpacing:2,textTransform:"uppercase"}}>Route Network</h2>
+        <button onClick={()=>setAdding(!adding)} style={BP(airline)}>+ New Route</button>
+      </div>
+      {adding&&<div style={{...CARD,marginBottom:16}}>
+        <h3 style={{color:"#c8a84b",marginBottom:12,fontSize:13}}>Launch New Route</h3>
+        <div style={{marginBottom:10}}>
+          <label style={LS}>Filter Arrival Region</label>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>{regions.map(r=><button key={r} onClick={()=>setRegionFilter(r)} style={{padding:"4px 10px",borderRadius:14,fontSize:11,cursor:"pointer",border:"1px solid",borderColor:regionFilter===r?airline.secondaryColor:"#1e3050",background:regionFilter===r?`${airline.secondaryColor}22`:"transparent",color:regionFilter===r?airline.secondaryColor:"#5a7a9a"}}>{r}</button>)}</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
+          <div><label style={LS}>Departure</label><select style={IS} value={form.dep} onChange={e=>setForm(f=>({...f,dep:e.target.value}))}>{AIRPORTS.map(a=><option key={a.code} value={a.code}>{a.code} - {a.city}</option>)}</select></div>
+          <div><label style={LS}>Arrival ({filteredArr.length})</label><select style={IS} value={form.arr} onChange={e=>setForm(f=>({...f,arr:e.target.value}))}><option value="">Select arrival</option>{filteredArr.map(a=><option key={a.code} value={a.code}>{a.code} - {a.city}, {a.country}</option>)}</select></div>
+          <div><label style={LS}>Aircraft</label><select style={IS} value={form.aircraftModel} onChange={e=>setForm(f=>({...f,aircraftModel:e.target.value}))}>{AIRCRAFT_FLEET.map(a=><option key={a.id} value={a.id}>{a.name} ({a.range.toLocaleString()}km)</option>)}</select></div>
+        </div>
+        {dist>0&&<div style={{background:"#050d1a",borderRadius:6,padding:8,marginBottom:10,fontSize:11,display:"flex",gap:16,flexWrap:"wrap"}}>
+          <span style={{color:"#60a5fa"}}>Distance: {dist.toLocaleString()} km</span><span style={{color:"#a78bfa"}}>Time: {hrs} hrs</span><span style={{color:"#fbbf24"}}>Fuel: {fmt(estFuel)}/flight</span>{selAC&&dist>selAC.range&&<span style={{color:"#ef4444"}}>OUT OF RANGE</span>}{isIntl&&<span style={{color:"#22c55e"}}>International</span>}
+        </div>}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:10}}>
+          <div><label style={LS}>Freq/week</label><input type="number" min={1} max={14} style={IS} value={form.frequency} onChange={e=>setForm(f=>({...f,frequency:+e.target.value}))}/></div>
+          <div><label style={LS}>Economy $</label><input type="number" style={IS} placeholder={`~$${Math.round(dist*0.08)}`} onChange={e=>setForm(f=>({...f,fares:{...f.fares,eco:+e.target.value}}))}/></div>
+          <div><label style={LS}>Business $</label><input type="number" style={IS} placeholder={`~$${Math.round(dist*0.28)}`} onChange={e=>setForm(f=>({...f,fares:{...f.fares,bus:+e.target.value}}))}/></div>
+          <div><label style={LS}>First Class $</label><input type="number" style={IS} placeholder={`~$${Math.round(dist*0.56)}`} onChange={e=>setForm(f=>({...f,fares:{...f.fares,first:+e.target.value}}))}/></div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}}>
+          <div><label style={LS}>Load Factor: {form.loadFactor}%</label><input type="range" min={40} max={100} value={form.loadFactor} style={{width:"100%"}} onChange={e=>setForm(f=>({...f,loadFactor:+e.target.value}))}/></div>
+          <div><label style={LS}>Cargo Rate</label><input type="number" step={0.1} style={IS} value={form.cargoRate} onChange={e=>setForm(f=>({...f,cargoRate:+e.target.value}))}/></div>
+          <div><label style={LS}>Ancillary $/pax</label><input type="number" style={IS} value={form.ancillary} onChange={e=>setForm(f=>({...f,ancillary:+e.target.value}))}/></div>
+        </div>
+        <div style={{marginBottom:12}}>
+          <label style={{...LS,marginBottom:8}}>Meal Service</label>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {depAP&&<div><div style={{color:"#5a7a9a",fontSize:10,marginBottom:5}}>Outbound ({depAP.country})</div><div style={{display:"flex",flexWrap:"wrap",gap:5}}>{depMeals.map(m=><button key={m.name} onClick={()=>setForm(f=>({...f,mealDep:f.mealDep?.name===m.name?null:m}))} style={{padding:"3px 9px",borderRadius:14,fontSize:10,cursor:"pointer",border:"1px solid",borderColor:form.mealDep?.name===m.name?"#c8a84b":"#1e3050",background:form.mealDep?.name===m.name?"#c8a84b22":"transparent",color:form.mealDep?.name===m.name?"#c8a84b":"#5a7a9a"}}>{m.name} +${m.cost}</button>)}</div></div>}
+            {arrAP&&isIntl&&<div><div style={{color:"#5a7a9a",fontSize:10,marginBottom:5}}>Return ({arrAP.country})</div><div style={{display:"flex",flexWrap:"wrap",gap:5}}>{arrMeals.map(m=><button key={m.name} onClick={()=>setForm(f=>({...f,mealArr:f.mealArr?.name===m.name?null:m}))} style={{padding:"3px 9px",borderRadius:14,fontSize:10,cursor:"pointer",border:"1px solid",borderColor:form.mealArr?.name===m.name?"#c8a84b":"#1e3050",background:form.mealArr?.name===m.name?"#c8a84b22":"transparent",color:form.mealArr?.name===m.name?"#c8a84b":"#5a7a9a"}}>{m.name} +${m.cost}</button>)}</div></div>}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}><button onClick={addRoute} style={BP(airline)}>Launch Route</button><button onClick={()=>setAdding(false)} style={BS}>Cancel</button></div>
+      </div>}
+      {gs.routes.length===0&&!adding&&<div style={{...CARD,textAlign:"center",padding:36,color:"#3a5a7a"}}>No routes yet. Click New Route to launch your first flight!</div>}
+      {gs.routes.map(r=>{const dep=AIRPORTS.find(a=>a.code===r.dep);const arr=AIRPORTS.find(a=>a.code===r.arr);return(
+        <div key={r.id} style={{...CARD,marginBottom:8,borderLeft:`3px solid ${hc(r.healthScore||75)}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color:"#d4e4f4"}}>{r.dep} to {r.arr} {r.isIntl&&<span style={{color:"#22c55e",fontSize:10}}>INTL</span>}</div>
+              <div style={{color:"#5a7a9a",fontSize:11}}>{dep?.city} to {arr?.city} - {r.distance?.toLocaleString()}km - {r.flightHrs}h - {r.frequency}x/wk</div>
+              <div style={{color:"#5a7a9a",fontSize:11}}>{AIRCRAFT_FLEET.find(a=>a.id===r.aircraftModel)?.name}</div>
+              {(r.mealDep||r.mealArr)&&<div style={{color:"#c8a84b",fontSize:11}}>Meals: {r.mealDep?.name}{r.mealArr?` / ${r.mealArr.name}`:""}</div>}
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{color:(r.dailyProfit||0)>0?"#22c55e":"#ef4444",fontWeight:700}}>{fmt(r.dailyProfit||0)}/day</div>
+              <div style={{color:"#5a7a9a",fontSize:11}}>{r.paxToday||0} pax today</div>
+              <div style={{display:"flex",alignItems:"center",gap:5,justifyContent:"flex-end",marginTop:3}}>
+                <span style={{color:"#5a7a9a",fontSize:10}}>Health:</span>
+                <div style={{background:"#1e3050",borderRadius:8,width:70,height:5}}><div style={{background:hc(r.healthScore||75),width:`${r.healthScore||75}%`,height:"100%",borderRadius:8}}/></div>
+                <span style={{color:hc(r.healthScore||75),fontSize:10}}>{r.healthScore||75}%</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={()=>setGs(prev=>({...prev,routes:prev.routes.filter(x=>x.id!==r.id)}))} style={{...BS,fontSize:10,padding:"3px 9px",color:"#ef4444",borderColor:"#ef4444",marginTop:8}}>Suspend Route</button>
+        </div>
+      );})}
+    </div>
+  );
+}
+
+function FleetTab({gs,setGs,airline,showNotif}){
+  const [buying,setBuying]=useState(false);const [typeFilter,setTypeFilter]=useState("all");
+  const types=["all","narrowbody","widebody","superjumbo","regional","turboprop","freighter"];
+  function buy(model){
+    if(model.price===0)return showNotif("No longer in production.","err");
+    if(gs.cash<model.price)return showNotif("Insufficient funds.","err");
+    const reg=`${airline.code}${String(gs.fleet.length+1).padStart(3,"0")}`;
+    setGs(prev=>({...prev,cash:prev.cash-model.price,fleet:[...prev.fleet,{id:`ac-${Date.now()}`,modelId:model.id,registration:reg,status:"active",age:0,maintenanceDue:500,hoursFlown:0,assignedRoute:null}]}));
+    showNotif(`${model.name} (${reg}) added to fleet!`);
+  }
+  function doMaint(acId){
+    const ac=gs.fleet.find(a=>a.id===acId);const model=AIRCRAFT_FLEET.find(m=>m.id===ac.modelId);const cost=model.maintenance*12;
+    if(gs.cash<cost)return showNotif("Insufficient funds.","err");
+    setGs(prev=>({...prev,cash:prev.cash-cost,fleet:prev.fleet.map(a=>a.id===acId?{...a,maintenanceDue:500,status:"active"}:a)}));
+    showNotif(`Maintenance done on ${ac.registration}.`);
+  }
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <h2 style={{color:airline.secondaryColor,fontSize:18,fontWeight:700,margin:0,letterSpacing:2,textTransform:"uppercase"}}>Fleet Management</h2>
+        <button onClick={()=>setBuying(!buying)} style={BP(airline)}>+ Acquire Aircraft</button>
+      </div>
+      <div style={{marginBottom:16}}>
+        <div style={{color:"#c8a84b",fontSize:12,fontWeight:700,marginBottom:8}}>Your Fleet ({gs.fleet.length})</div>
+        {gs.fleet.map(ac=>{const model=AIRCRAFT_FLEET.find(m=>m.id===ac.modelId);if(!model)return null;const nm=ac.maintenanceDue<50;return(
+          <div key={ac.id} style={{...CARD,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,borderLeft:`3px solid ${nm?"#ef4444":"#22c55e"}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:26}}>✈</span>
+              <div><div style={{color:"#d4e4f4",fontWeight:700,fontSize:13}}>{model.name}</div><div style={{color:"#5a7a9a",fontSize:11}}>{ac.registration} - Age: {ac.age}y - {ac.hoursFlown.toLocaleString()}hrs</div><div style={{color:"#5a7a9a",fontSize:11}}>Seats: {model.seats.eco}Y{model.seats.bus>0?` ${model.seats.bus}J`:""}{model.seats.first>0?` ${model.seats.first}F`:""} - Cargo: {model.cargo}t</div></div>
+            </div>
+            <div style={{textAlign:"right"}}><div style={{color:nm?"#ef4444":"#22c55e",fontSize:12}}>{nm?"MAINT DUE":"ACTIVE"}</div><div style={{color:"#5a7a9a",fontSize:11}}>Maint in {ac.maintenanceDue}hrs</div>{nm&&<button onClick={()=>doMaint(ac.id)} style={{...BP(airline),fontSize:10,padding:"4px 10px",marginTop:4}}>Maintain ({fmt(model.maintenance*12)})</button>}</div>
+          </div>
+        );})}
+      </div>
+      {buying&&<div style={CARD}>
+        <div style={{color:"#c8a84b",fontWeight:700,marginBottom:10,fontSize:13}}>Aircraft Marketplace</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>{types.map(t=><button key={t} onClick={()=>setTypeFilter(t)} style={{padding:"4px 11px",borderRadius:14,fontSize:11,cursor:"pointer",border:"1px solid",borderColor:typeFilter===t?airline.secondaryColor:"#1e3050",background:typeFilter===t?`${airline.secondaryColor}22`:"transparent",color:typeFilter===t?airline.secondaryColor:"#5a7a9a"}}>{t}</button>)}</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:8}}>
+          {AIRCRAFT_FLEET.filter(m=>typeFilter==="all"||m.type===typeFilter).map(model=>(
+            <div key={model.id} style={{...CARD,background:"#050d1a",position:"relative"}}>
+              {model.legacy&&<div style={{position:"absolute",top:6,right:6,background:"#92400e",color:"#fde68a",fontSize:9,padding:"2px 6px",borderRadius:8}}>LEGACY</div>}
+              <div style={{fontSize:24,marginBottom:4}}>{model.icon}</div>
+              <div style={{color:"#d4e4f4",fontWeight:700,fontSize:12}}>{model.name}</div>
+              <div style={{color:"#5a7a9a",fontSize:11,marginTop:3}}>Range: {model.range.toLocaleString()}km - Speed: {model.speed}km/h</div>
+              <div style={{color:"#5a7a9a",fontSize:11}}>Seats: {model.seats.eco}Y{model.seats.bus>0?` ${model.seats.bus}J`:""}{model.seats.first>0?` ${model.seats.first}F`:""}</div>
+              <div style={{color:"#5a7a9a",fontSize:11}}>Cargo: {model.cargo}t - Fuel: {model.fuelBurnPerHr.toLocaleString()}L/hr</div>
+              <div style={{color:"#c8a84b",fontWeight:700,marginTop:6,fontSize:13}}>{model.price>0?fmt(model.price):"Secondary Market Only"}</div>
+              <button onClick={()=>buy(model)} disabled={model.price===0||gs.cash<model.price} style={{...BP(airline),fontSize:10,padding:"5px 10px",marginTop:6,width:"100%",opacity:model.price===0||gs.cash<model.price?0.4:1}}>{model.price===0?"Unavailable":gs.cash<model.price?"Insufficient Funds":"Purchase"}</button>
+            </div>
+          ))}
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+function AirportsTab({gs,setGs,airline,showNotif}){
+  const [sel,setSel]=useState(null);const [regionF,setRegionF]=useState("All");const [search,setSearch]=useState("");
+  const regions=["All","North America","Europe","Asia-Pacific","Middle East","Latin America","Africa"];
+  const filtered=AIRPORTS.filter(a=>(regionF==="All"||a.region===regionF)&&(search===""||a.code.includes(search.toUpperCase())||a.city.toLowerCase().includes(search.toLowerCase())));
+  function buyGate(code){const ap=AIRPORTS.find(a=>a.code===code);if(gs.cash<8500000)return showNotif("Insufficient funds.","err");setGs(prev=>{const g={...prev.gates};if(!g[code])g[code]={owned:0,rented:0,rentedOut:0,capacity:ap.gates};g[code].owned=(g[code].owned||0)+1;showNotif(`Gate acquired at ${code}!`);return{...prev,cash:prev.cash-8500000,gates:g};});}
+  function rentGate(code){const ap=AIRPORTS.find(a=>a.code===code);setGs(prev=>{const g={...prev.gates};if(!g[code])g[code]={owned:0,rented:0,rentedOut:0,capacity:ap.gates};g[code].rented=(g[code].rented||0)+1;showNotif(`Gate rented at ${code}.`);return{...prev,gates:g};});}
+  function rentOut(code){setGs(prev=>{const g={...prev.gates};const gg=g[code];if(!gg||gg.owned<=0)return showNotif("No owned gates.","err")||prev;if((gg.rentedOut||0)>=gg.owned)return showNotif("All gates rented out.","err")||prev;g[code].rentedOut=(g[code].rentedOut||0)+1;showNotif(`Gate at ${code} rented out.`);return{...prev,gates:g};});}
+  return(
+    <div>
+      <h2 style={{color:airline.secondaryColor,fontSize:18,fontWeight:700,marginBottom:12,letterSpacing:2,textTransform:"uppercase"}}>Airport Operations</h2>
+      <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+        <input style={{...IS,flex:1,minWidth:140}} placeholder="Search by code or city" value={search} onChange={e=>setSearch(e.target.value)}/>
+        {regions.map(r=><button key={r} onClick={()=>setRegionF(r)} style={{padding:"4px 10px",borderRadius:14,fontSize:11,cursor:"pointer",border:"1px solid",borderColor:regionF===r?airline.secondaryColor:"#1e3050",background:regionF===r?`${airline.secondaryColor}22`:"transparent",color:regionF===r?airline.secondaryColor:"#5a7a9a"}}>{r}</button>)}
+      </div>
+      <div style={{color:"#5a7a9a",fontSize:11,marginBottom:10}}>{filtered.length} airports</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:8}}>
+        {filtered.map(ap=>{const gd=gs.gates[ap.code]||{owned:0,rented:0,rentedOut:0};const has=gd.owned>0||gd.rented>0;return(
+          <div key={ap.code} style={{...CARD,borderLeft:`3px solid ${has?airline.secondaryColor:"#1e3050"}`,cursor:"pointer"}} onClick={()=>setSel(sel===ap.code?null:ap.code)}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div><div style={{color:"#d4e4f4",fontWeight:700,fontSize:13}}>{ap.code} <span style={{color:"#5a7a9a",fontWeight:400,fontSize:11}}>- {ap.city}</span></div><div style={{color:"#5a7a9a",fontSize:10}}>{ap.name}</div><div style={{color:"#5a7a9a",fontSize:10}}>{ap.country} - {ap.region}</div></div>
+              <div style={{textAlign:"right"}}><div style={{color:"#c8a84b",fontSize:11}}>{ap.slots} slots</div><div style={{color:"#5a7a9a",fontSize:10}}>{ap.gates} gates</div>{ap.hub&&<div style={{color:"#22c55e",fontSize:9}}>MAJOR HUB</div>}</div>
+            </div>
+            {has&&<div style={{fontSize:10,color:"#5a7a9a",marginTop:5}}>Owned: {gd.owned} - Rented: {gd.rented} - Out: {gd.rentedOut}{gd.rentedOut>0&&<span style={{color:"#22c55e"}}> (+${(gd.rentedOut*1200).toLocaleString()}/day)</span>}</div>}
+            {sel===ap.code&&<div style={{marginTop:10,display:"flex",gap:6,flexWrap:"wrap"}} onClick={e=>e.stopPropagation()}>
+              <button onClick={()=>buyGate(ap.code)} style={{...BP(airline),fontSize:10,padding:"5px 10px"}}>Buy Gate ($8.5M)</button>
+              <button onClick={()=>rentGate(ap.code)} style={{...BS,fontSize:10,padding:"5px 10px"}}>Rent ($900/day)</button>
+              {gd.owned>0&&<button onClick={()=>rentOut(ap.code)} style={{...BS,fontSize:10,padding:"5px 10px",color:"#22c55e",borderColor:"#22c55e"}}>Rent Out (+$1,200/day)</button>}
+            </div>}
+          </div>
+        );})}
+      </div>
+    </div>
+  );
+}
+
+function StaffTab({gs,setGs,showNotif}){
+  const monthly=EMPLOYEE_ROLES.reduce((s,r)=>s+(gs.employees.byRole[r.role]||0)*r.salary,0);
+  function hire(role,n=1){setGs(prev=>{const e={...prev.employees,byRole:{...prev.employees.byRole,[role]:(prev.employees.byRole[role]||0)+n}};e.total=Object.values(e.byRole).reduce((s,v)=>s+v,0);showNotif(`Hired ${n} ${role}.`);return{...prev,employees:e};});}
+  function fire(role){setGs(prev=>{if((prev.employees.byRole[role]||0)<=0)return prev;const e={...prev.employees,byRole:{...prev.employees.byRole,[role]:(prev.employees.byRole[role]||0)-1}};e.total=Object.values(e.byRole).reduce((s,v)=>s+v,0);showNotif(`${role} let go.`);return{...prev,employees:e};});}
+  return(
+    <div>
+      <h2 style={{color:"#c8a84b",fontSize:18,fontWeight:700,marginBottom:4,letterSpacing:2,textTransform:"uppercase"}}>Staff Management</h2>
+      <div style={{color:"#5a7a9a",fontSize:12,marginBottom:14}}>Total: {gs.employees.total} - Monthly payroll: {fmt(monthly)}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:8}}>
+        {EMPLOYEE_ROLES.map(r=>{const count=gs.employees.byRole[r.role]||0;return(
+          <div key={r.role} style={CARD}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+              <div><div style={{color:"#d4e4f4",fontWeight:700,fontSize:13}}>{r.role}</div><div style={{color:"#5a7a9a",fontSize:11}}>${r.salary.toLocaleString()}/mo per {r.perUnit}</div>{r.required&&<div style={{color:"#f59e0b",fontSize:9}}>REQUIRED</div>}</div>
+              <div style={{color:"#c8a84b",fontWeight:700,fontSize:20}}>{count}</div>
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>hire(r.role)} style={{...BP({secondaryColor:"#c8a84b",primaryColor:"#1a3a6c"}),fontSize:10,padding:"4px 10px"}}>+1</button>
+              <button onClick={()=>hire(r.role,5)} style={{...BP({secondaryColor:"#c8a84b",primaryColor:"#1a3a6c"}),fontSize:10,padding:"4px 10px"}}>+5</button>
+              <button onClick={()=>fire(r.role)} style={{...BS,fontSize:10,padding:"4px 10px",color:"#ef4444",borderColor:"#ef4444"}}>Fire</button>
+            </div>
+          </div>
+        );})}
+      </div>
+    </div>
+  );
+}
+
+function AlliancesTab({gs,setGs,airline,showNotif}){
+  function propose(ai){if(gs.alliances.find(a=>a.partner===ai.code))return showNotif("Already allied.","err");if(gs.cash<5000000)return showNotif("Insufficient funds.","err");setGs(prev=>({...prev,cash:prev.cash-5000000,alliances:[...prev.alliances,{partner:ai.code,name:ai.name,color:ai.color,bonus:"Codeshare + 10% load factor boost",since:prev.daysPassed}]}));showNotif(`Alliance formed with ${ai.name}!`);}
+  function leave(code){setGs(prev=>({...prev,alliances:prev.alliances.filter(a=>a.partner!==code)}));showNotif("Alliance dissolved.");}
+  return(
+    <div>
+      <h2 style={{color:airline.secondaryColor,fontSize:18,fontWeight:700,marginBottom:12,letterSpacing:2,textTransform:"uppercase"}}>Alliances and Codeshares</h2>
+      {gs.alliances.length>0&&<div style={{marginBottom:16}}>
+        <div style={{color:"#22c55e",fontSize:12,fontWeight:700,marginBottom:8}}>Active Alliances</div>
+        {gs.alliances.map(a=><div key={a.partner} style={{...CARD,borderLeft:`3px solid ${a.color}`,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div><div style={{color:"#d4e4f4",fontWeight:700}}>{a.name}</div><div style={{color:"#22c55e",fontSize:12}}>{a.bonus}</div><div style={{color:"#5a7a9a",fontSize:11}}>Since Day {a.since}</div></div>
+          <button onClick={()=>leave(a.partner)} style={{...BS,color:"#ef4444",borderColor:"#ef4444",fontSize:11}}>Dissolve</button>
+        </div>)}
+      </div>}
+      <div style={{color:"#c8a84b",fontSize:12,fontWeight:700,marginBottom:8}}>Available Partners</div>
+      {gs.aiAirlines.filter(ai=>!gs.alliances.find(a=>a.partner===ai.code)).map(ai=><div key={ai.code} style={{...CARD,borderLeft:`3px solid ${ai.color}`,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+        <div><div style={{color:"#d4e4f4",fontWeight:700}}>{ai.name}</div><div style={{color:"#5a7a9a",fontSize:12}}>{ai.code} - Hub: {ai.hub} - {ai.type}</div></div>
+        <button onClick={()=>propose(ai)} style={{...BP(airline),fontSize:11}}>Propose ($5M)</button>
+      </div>)}
+    </div>
+  );
+}
+
+function MATab({gs,setGs,airline,showNotif}){
+  function acquire(ai){const price=ai.cash*2.2;if(gs.cash<price)return showNotif("Insufficient funds.","err");setGs(prev=>({...prev,cash:prev.cash-price,fleet:[...prev.fleet,...Array(ai.fleet).fill(null).map((_,i)=>({id:`acq-${ai.code}-${i}`,modelId:"737MAX8",registration:`${ai.code}A${i+1}`,status:"active",age:5,maintenanceDue:200,hoursFlown:8000,assignedRoute:null}))],mergers:[...prev.mergers,{...ai,type:"Acquired",acquiredDay:prev.daysPassed,price}],aiAirlines:prev.aiAirlines.filter(a=>a.code!==ai.code)}));showNotif(`${ai.name} acquired!`);}
+  function sub(ai){const price=ai.cash*1.4;if(gs.cash<price)return showNotif("Insufficient funds.","err");setGs(prev=>({...prev,cash:prev.cash-price,mergers:[...prev.mergers,{...ai,type:"Subsidiary",acquiredDay:prev.daysPassed,price}],aiAirlines:prev.aiAirlines.filter(a=>a.code!==ai.code)}));showNotif(`${ai.name} is now a subsidiary.`);}
+  return(
+    <div>
+      <h2 style={{color:airline.secondaryColor,fontSize:18,fontWeight:700,marginBottom:12,letterSpacing:2,textTransform:"uppercase"}}>Mergers and Acquisitions</h2>
+      {gs.mergers.length>0&&<div style={{marginBottom:16}}>
+        <div style={{color:"#22c55e",fontSize:12,fontWeight:700,marginBottom:8}}>Your Portfolio</div>
+        {gs.mergers.map(m=><div key={m.code} style={{...CARD,borderLeft:"3px solid #22c55e",marginBottom:6}}><div style={{color:"#d4e4f4",fontWeight:700}}>{m.name} <span style={{color:"#22c55e",fontSize:11}}>({m.type})</span></div><div style={{color:"#5a7a9a",fontSize:11}}>Day {m.acquiredDay} - {fmt(m.price)}</div></div>)}
+      </div>}
+      <div style={{color:"#c8a84b",fontSize:12,fontWeight:700,marginBottom:8}}>Acquisition Targets</div>
+      {gs.aiAirlines.length===0&&<div style={{...CARD,textAlign:"center",color:"#3a5a7a",padding:28}}>You have acquired all competitors!</div>}
+      {gs.aiAirlines.map(ai=><div key={ai.code} style={{...CARD,borderLeft:`3px solid ${ai.color}`,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+        <div><div style={{color:"#d4e4f4",fontWeight:700}}>{ai.name}</div><div style={{color:"#5a7a9a",fontSize:12}}>{ai.code} - Hub: {ai.hub} - {ai.type}</div><div style={{color:"#5a7a9a",fontSize:11}}>Est value: {fmt(ai.cash)} - Fleet: {ai.fleet}</div></div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}><button onClick={()=>sub(ai)} style={{...BS,fontSize:11}}>Subsidiary ({fmt(ai.cash*1.4)})</button><button onClick={()=>acquire(ai)} style={{...BP(airline),fontSize:11}}>Full Acquire ({fmt(ai.cash*2.2)})</button></div>
+      </div>)}
+    </div>
+  );
+}
+
+function FinanceTab({gs,airline}){
+  function exportCSV(){const h=["Month","Revenue","Expenses","Profit","Cash"];const rows=gs.financials.history.map(x=>[x.month,x.revenue.toFixed(2),x.expenses.toFixed(2),x.profit.toFixed(2),x.cash.toFixed(2)]);const csv=[h,...rows].map(r=>r.join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`${airline.name.replace(/\s/g,"_")}_financials.csv`;a.click();}
+  function exportRoutes(){const h=["Route","Distance km","Hours","Aircraft","Daily Rev","Daily Profit","Load Factor","Health"];const rows=gs.routes.map(r=>[`${r.dep}-${r.arr}`,r.distance,r.flightHrs,AIRCRAFT_FLEET.find(a=>a.id===r.aircraftModel)?.name||"",r.dailyRevenue?.toFixed(2)||0,r.dailyProfit?.toFixed(2)||0,`${r.loadFactor}%`,`${r.healthScore||75}%`]);const csv=[h,...rows].map(r=>r.join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`${airline.name.replace(/\s/g,"_")}_routes.csv`;a.click();}
+  const totRev=gs.financials.history.reduce((s,h)=>s+h.revenue,0);const totExp=gs.financials.history.reduce((s,h)=>s+h.expenses,0);
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <h2 style={{color:airline.secondaryColor,fontSize:18,fontWeight:700,margin:0,letterSpacing:2,textTransform:"uppercase"}}>Financial Reports</h2>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}><button onClick={exportCSV} style={BP(airline)}>Download Financials CSV</button><button onClick={exportRoutes} style={BS}>Download Routes CSV</button></div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10,marginBottom:16}}>
+        {[{l:"Cash",v:fmt(gs.cash),c:gs.cash>0?"#22c55e":"#ef4444",i:"💵"},{l:"All-Time Revenue",v:fmt(totRev),c:"#60a5fa",i:"📈"},{l:"All-Time Expenses",v:fmt(totExp),c:"#f87171",i:"📉"},{l:"All-Time Profit",v:fmt(totRev-totExp),c:totRev>=totExp?"#22c55e":"#ef4444",i:"💹"}].map(x=>(
+          <div key={x.l} style={{...CARD,textAlign:"center"}}><div style={{fontSize:22,marginBottom:4}}>{x.i}</div><div style={{color:x.c,fontWeight:700,fontSize:16}}>{x.v}</div><div style={{color:"#3a5a7a",fontSize:10,letterSpacing:1,textTransform:"uppercase"}}>{x.l}</div></div>
+        ))}
+      </div>
+      <div style={{...CARD,marginBottom:12,overflowX:"auto"}}>
+        <div style={{color:"#c8a84b",fontWeight:700,marginBottom:10,fontSize:12}}>Route P&L</div>
+        {gs.routes.length===0&&<div style={{color:"#3a5a7a",fontSize:12}}>No active routes.</div>}
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+          <thead><tr style={{borderBottom:"1px solid #1e3050"}}>{["Route","Distance","Duration","Aircraft","Daily Rev","Daily P&L","Load","Health"].map(h=><th key={h} style={{padding:"5px 7px",color:"#5a7a9a",textAlign:"left",fontWeight:600,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+          <tbody>{gs.routes.map(r=>{const ac=AIRCRAFT_FLEET.find(a=>a.id===r.aircraftModel);const hc=(r.healthScore||75)>=70?"#22c55e":(r.healthScore||75)>=40?"#f59e0b":"#ef4444";return(<tr key={r.id} style={{borderBottom:"1px solid #0a1628"}}><td style={{padding:"5px 7px",color:"#d4e4f4",fontWeight:700}}>{r.dep} to {r.arr}</td><td style={{padding:"5px 7px",color:"#5a7a9a"}}>{r.distance?.toLocaleString()}km</td><td style={{padding:"5px 7px",color:"#5a7a9a"}}>{r.flightHrs}h</td><td style={{padding:"5px 7px",color:"#5a7a9a"}}>{ac?.name}</td><td style={{padding:"5px 7px",color:"#60a5fa"}}>{fmt(r.dailyRevenue||0)}</td><td style={{padding:"5px 7px",color:(r.dailyProfit||0)>0?"#22c55e":"#ef4444",fontWeight:700}}>{fmt(r.dailyProfit||0)}</td><td style={{padding:"5px 7px",color:"#c8a84b"}}>{r.loadFactor}%</td><td style={{padding:"5px 7px",color:hc}}>{r.healthScore||75}%</td></tr>);})}</tbody>
+        </table>
+      </div>
+      <div style={CARD}>
+        <div style={{color:"#c8a84b",fontWeight:700,marginBottom:10,fontSize:12}}>Monthly History</div>
+        {gs.financials.history.length===0&&<div style={{color:"#3a5a7a",fontSize:12}}>Appears every 30 game days.</div>}
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+          <thead><tr style={{borderBottom:"1px solid #1e3050"}}>{["Month","Revenue","Expenses","Profit","Cash"].map(h=><th key={h} style={{padding:"5px 7px",color:"#5a7a9a",textAlign:"left",fontWeight:600}}>{h}</th>)}</tr></thead>
+          <tbody>{gs.financials.history.map(h=><tr key={h.month} style={{borderBottom:"1px solid #0a1628"}}><td style={{padding:"5px 7px",color:"#d4e4f4"}}>Month {h.month}</td><td style={{padding:"5px 7px",color:"#60a5fa"}}>{fmt(h.revenue)}</td><td style={{padding:"5px 7px",color:"#f87171"}}>{fmt(h.expenses)}</td><td style={{padding:"5px 7px",color:h.profit>=0?"#22c55e":"#ef4444",fontWeight:700}}>{fmt(h.profit)}</td><td style={{padding:"5px 7px",color:"#c8a84b"}}>{fmt(h.cash)}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function EventsTab({gs}){
+  return(
+    <div>
+      <h2 style={{color:"#c8a84b",fontSize:18,fontWeight:700,marginBottom:12,letterSpacing:2,textTransform:"uppercase"}}>Events and News Feed</h2>
+      {gs.economicEvents.length>0&&<div style={{marginBottom:14}}>
+        <div style={{color:"#ef4444",fontWeight:700,marginBottom:8}}>Active Events</div>
+        {gs.economicEvents.map(ev=><div key={ev.id} style={{...CARD,borderLeft:"3px solid #ef4444",marginBottom:6}}><div style={{color:"#fca5a5",fontWeight:700}}>{ev.name}</div><div style={{color:"#5a7a9a",fontSize:12}}>{ev.desc}</div><div style={{color:"#ef4444",fontSize:12}}>{ev.daysLeft} days remaining</div></div>)}
+      </div>}
+      {gs.notifications.map((n,i)=><div key={i} style={{...CARD,marginBottom:5,display:"flex",gap:10}}><span style={{color:"#c8a84b",fontSize:10,whiteSpace:"nowrap"}}>Day {n.day}</span><span style={{color:"#8aaccc",fontSize:11}}>{n.msg}</span></div>)}
+      {gs.notifications.length===0&&<div style={{...CARD,textAlign:"center",color:"#3a5a7a",padding:28}}>No events yet. Keep flying!</div>}
+    </div>
+  );
+}
